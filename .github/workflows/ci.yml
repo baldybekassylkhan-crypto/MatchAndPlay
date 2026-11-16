@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Проверка типов
+        run: npm run typecheck
+
+      - name: Линтер
+        run: npm run lint
+
+      - name: Юнит-тесты
+        run: npm test
+
+      - name: Тесты базы данных (миграции, RLS-функции, триггеры)
+        run: npm run test:db
+
+      - name: Сборка
+        run: npm run build
