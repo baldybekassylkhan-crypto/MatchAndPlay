@@ -77,7 +77,7 @@ export function PostCard({ post, full = false }: { post: PostWithMeta; full?: bo
       {post.lobby && (
         <Link
           href={`/lobby/${post.lobby.id}`}
-          className="mx-4 mb-2 flex items-center gap-2 rounded-xl bg-accent px-3 py-1.5 text-sm font-semibold text-accent-ink"
+          className="mx-4 mb-2 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-semibold"
         >
           <Trophy className="size-4" />
           Хайлайт с игры: {SPORTS[post.lobby.sport]?.label.toLowerCase()}, {formatLongDate(post.lobby.start_time)}

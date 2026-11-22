@@ -3,7 +3,7 @@
 import { Camera, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
-import { compressImage } from "@/lib/image";
+import { compressImage, imageExt } from "@/lib/image";
 import { createClient } from "@/lib/supabase/client";
 
 const MAX_AVATAR_BYTES = 300 * 1024;
@@ -31,11 +31,11 @@ export function AvatarUpload({
     setBusy(true);
     try {
       const blob = await compressImage(file, { maxSide: 400, maxBytes: MAX_AVATAR_BYTES, square: true });
-      const path = `${userId}/${Date.now()}.webp`;
+      const path = `${userId}/${Date.now()}.${imageExt(blob)}`;
       const supabase = createClient();
       const { error } = await supabase.storage
         .from("avatars")
-        .upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
+        .upload(path, blob, { contentType: blob.type || "image/jpeg", cacheControl: "31536000" });
       if (error) throw error;
       onChange(supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl);
     } catch (e) {

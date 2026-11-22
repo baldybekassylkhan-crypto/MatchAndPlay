@@ -13,7 +13,7 @@ export interface LatLng {
 // Собственный маркер, чтобы не зависеть от картинок Leaflet, которые ломаются при сборке.
 const pin = L.divIcon({
   className: "",
-  html: '<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#b8f400;border:3px solid #0a0c0b;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>',
+  html: '<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#0095f6;border:3px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>',
   iconSize: [28, 28],
   iconAnchor: [14, 28],
 });

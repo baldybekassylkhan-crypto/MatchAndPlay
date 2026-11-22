@@ -215,7 +215,7 @@ function CardFace({
         background ? "translate-y-3 scale-[0.95] opacity-70" : ""
       }`}
     >
-      <div className="relative flex h-[38%] items-center justify-center bg-gradient-to-br from-accent to-[#7fd400]">
+      <div className="relative flex h-[38%] items-center justify-center bg-surface-2">
         <span className="text-8xl drop-shadow-sm" aria-hidden>
           {sport?.emoji}
         </span>

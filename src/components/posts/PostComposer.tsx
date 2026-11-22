@@ -5,7 +5,7 @@ import { Film, ImagePlus, Loader2, Trophy, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createPost, discardUploads } from "@/app/actions/posts";
-import { compressImage } from "@/lib/image";
+import { compressImage, imageExt } from "@/lib/image";
 import { MAX_IMAGE_BYTES, MAX_IMAGE_SIDE, MAX_POST_IMAGES, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, POSTS_BUCKET } from "@/lib/media";
 import { SportGrid } from "@/components/ui/SportGrid";
 import { SPORTS, type SportId } from "@/lib/sports";
@@ -126,11 +126,11 @@ export function PostComposer({
       const media: PostMedia[] = [];
       for (const [i, d] of drafts.entries()) {
         setBusy(`Загружаем ${i + 1} из ${drafts.length}…`);
-        const ext = d.type === "image" ? "webp" : (d.blob.type.split("/")[1] ?? "mp4").replace("quicktime", "mov");
+        const ext = d.type === "image" ? imageExt(d.blob) : (d.blob.type.split("/")[1] ?? "mp4").replace("quicktime", "mov");
         const path = `${userId}/${Date.now()}-${i}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from(POSTS_BUCKET)
-          .upload(path, d.blob, { contentType: d.blob.type || (d.type === "image" ? "image/webp" : "video/mp4"), cacheControl: "31536000" });
+          .upload(path, d.blob, { contentType: d.blob.type || (d.type === "image" ? "image/jpeg" : "video/mp4"), cacheControl: "31536000" });
         if (upErr) throw new Error("Не удалось загрузить файл. Проверьте интернет.");
         uploaded.push(path);
         media.push({ type: d.type, path, w: d.w, h: d.h, ...(d.duration ? { duration: Math.round(d.duration * 10) / 10 } : {}) });

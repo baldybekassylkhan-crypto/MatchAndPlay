@@ -197,7 +197,7 @@ export function SheetSelect<T extends string | number>({
                             onClick={() => pick(o.value)}
                             className={clsx(
                               "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left",
-                              isSelected ? "bg-accent/20 font-semibold" : "hover:bg-surface-2 active:bg-surface-2",
+                              isSelected ? "bg-surface-2 font-semibold" : "hover:bg-surface-2 active:bg-surface-2",
                             )}
                           >
                             <span className="flex-1 truncate">{o.label}</span>

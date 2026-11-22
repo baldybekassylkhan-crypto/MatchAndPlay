@@ -1,8 +1,11 @@
 import { ImageResponse } from "next/og";
 
-/** Значок приложения: лаймовая надпись M&P на тёмном фоне. */
+const STORY_GRADIENT = "linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%)";
+
+/** Значок приложения: белые буквы M&P на закатном градиенте (как у Instagram). */
 export function renderAppIcon(size: number, { padded = false }: { padded?: boolean } = {}) {
-  const inner = padded ? size * 0.62 : size;
+  // maskable: система может обрезать края, поэтому текст мельче, а фон на всю площадь
+  const fontSize = size * (padded ? 0.24 : 0.32);
   return new ImageResponse(
     (
       <div
@@ -12,26 +15,15 @@ export function renderAppIcon(size: number, { padded = false }: { padded?: boole
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0a0c0b",
+          backgroundImage: STORY_GRADIENT,
+          borderRadius: padded ? 0 : size * 0.22,
+          color: "#ffffff",
+          fontSize,
+          fontWeight: 800,
+          letterSpacing: -fontSize * 0.04,
         }}
       >
-        <div
-          style={{
-            width: inner,
-            height: inner,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: padded ? inner / 2 : size * 0.22,
-            background: "#b8f400",
-            color: "#0a0c0b",
-            fontSize: inner * 0.34,
-            fontWeight: 800,
-            letterSpacing: -inner * 0.02,
-          }}
-        >
-          M&P
-        </div>
+        M&P
       </div>
     ),
     { width: size, height: size },

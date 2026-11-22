@@ -31,7 +31,7 @@ export function Avatar({
       style={{ ...style, fontSize: size * 0.4 }}
       className={clsx(
         "flex shrink-0 items-center justify-center rounded-full font-bold uppercase",
-        showIcon ? "bg-surface-2 text-muted" : "bg-accent text-accent-ink",
+        showIcon ? "bg-surface-2 text-muted" : "bg-surface-2 text-ink",
         className,
       )}
       aria-label={name || "Аватар"}

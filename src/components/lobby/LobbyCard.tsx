@@ -46,7 +46,7 @@ export function LobbyCard({
       </div>
 
       {reason && (
-        <p className="mt-3 flex items-center gap-1.5 rounded-xl bg-accent/25 px-3 py-1.5 text-sm font-semibold">
+        <p className="mt-3 flex items-center gap-1.5 rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-semibold">
           <Sparkles className="size-3.5 shrink-0" />
           {reason}
         </p>

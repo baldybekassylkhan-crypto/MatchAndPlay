@@ -59,7 +59,7 @@ function Group({ title, items }: { title: string; items: AppNotification[] }) {
           const r = renderNotification(n);
           return (
             <li key={n.id}>
-              <Link href={r.href} className={clsx("flex items-start gap-3 px-4 py-3", !n.read && "bg-accent/10")}>
+              <Link href={r.href} className={clsx("flex items-start gap-3 px-4 py-3", !n.read && "bg-accent/5")}>
                 {n.payload.actor ? (
                   <Avatar src={n.payload.actor_avatar} name={n.payload.actor} size={44} />
                 ) : (

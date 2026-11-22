@@ -3,7 +3,9 @@ import clsx from "clsx";
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={clsx("font-extrabold tracking-tight", className)}>
-      Match<span className="rounded-md bg-accent px-1 text-accent-ink">&amp;</span>Play
+      Match
+      <span className="bg-(image:--story-gradient) bg-clip-text px-0.5 text-transparent">&amp;</span>
+      Play
     </span>
   );
 }

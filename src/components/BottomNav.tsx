@@ -50,14 +50,14 @@ export function BottomNav({ username }: { username: string }) {
                   <motion.span
                     layoutId="bottom-nav-indicator"
                     transition={SWITCH_SPRING}
-                    className="absolute top-0 h-[3px] w-8 rounded-b-full bg-accent"
+                    className="absolute top-0 h-[3px] w-8 rounded-b-full bg-ink"
                   />
                 )}
                 {primary ? (
                   <motion.span
                     whileTap={{ scale: 0.88, rotate: 90 }}
                     transition={SWITCH_SPRING}
-                    className="glass-accent flex size-10 items-center justify-center rounded-2xl text-accent-ink"
+                    className="flex size-10 items-center justify-center rounded-2xl bg-ink text-bg"
                   >
                     <Icon className="size-6" strokeWidth={2.5} />
                   </motion.span>
