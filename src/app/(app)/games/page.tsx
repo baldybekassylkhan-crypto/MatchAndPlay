@@ -38,7 +38,7 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Мои игры" />
-      <div className="sticky top-14 z-20 overflow-x-auto border-b border-line bg-bg px-4 py-3">
+      <div className="no-scrollbar sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 overflow-x-auto border-b border-line bg-bg px-4 py-3">
         <TabLinks
           layoutId="games-tab"
           items={TABS.map((t) => ({ href: `/games?tab=${t.id}`, label: t.label, active: tab === t.id }))}

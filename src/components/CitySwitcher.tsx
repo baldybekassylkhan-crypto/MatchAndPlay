@@ -33,10 +33,10 @@ export function CitySwitcher({ cities, value }: { cities: City[]; value: number 
           onClick={open}
           aria-haspopup="dialog"
           aria-label={`Город: ${label ?? "не выбран"}`}
-          className="glass inline-flex items-center gap-1.5 rounded-full py-2 pr-2.5 pl-3 text-sm font-semibold"
+          className="glass inline-flex h-10 min-w-0 shrink-0 items-center gap-1.5 rounded-full pr-2.5 pl-3 text-sm font-semibold"
         >
           <MapPin className="size-4" />
-          {label ?? "Город"}
+          <span className="max-w-[7.5rem] truncate">{label ?? "Город"}</span>
           <ChevronDown className="size-4 text-muted" />
         </button>
       )}

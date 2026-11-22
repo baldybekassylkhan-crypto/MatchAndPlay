@@ -87,7 +87,7 @@ export function SearchControls({
           {q && !thinking && (
             <button
               type="button"
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-muted"
+              className="absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center text-muted"
               onClick={() => {
                 setQ("");
                 if (filters.q || filters.ai) go({ ...EMPTY_FILTERS, city: filters.city, dist: filters.dist });
@@ -120,7 +120,7 @@ export function SearchControls({
         </p>
       )}
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1">
         <Segmented
           size="sm"
           layoutId="search-mode"
@@ -144,7 +144,7 @@ export function SearchControls({
               if (c.key === "q") setQ("");
               go(c.without);
             }}
-            className="chip shrink-0 py-1.5"
+            className="chip h-10 shrink-0"
           >
             {c.label}
             <X className="size-3.5 text-muted" />

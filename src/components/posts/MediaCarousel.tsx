@@ -93,7 +93,7 @@ function AutoVideo({ src }: { src: string }) {
           e.stopPropagation();
           setMuted((m) => !m);
         }}
-        className="absolute right-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-black/60 text-white"
+        className="absolute right-2 bottom-2 flex size-11 items-center justify-center rounded-full bg-black/60 text-white"
         aria-label={muted ? "Включить звук" : "Выключить звук"}
       >
         {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}

@@ -11,7 +11,8 @@ export function PageHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <header className="glass-bar sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line/60 px-4 pt-[env(safe-area-inset-top)]">
+    // Высота = 56 px + вырез/статус-бар, чтобы заголовок не прижимался к часам в установленном приложении
+    <header className="glass-bar sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center gap-2 border-b border-line/60 px-4 pt-[env(safe-area-inset-top)]">
       {back && (
         <Link href={back} className="-ml-2 flex size-10 items-center justify-center" aria-label="Назад">
           <ChevronLeft className="size-6" />

@@ -152,7 +152,7 @@ export function SheetSelect<T extends string | number>({
                     <button
                       type="button"
                       onClick={() => setOpen(false)}
-                      className="glass flex size-9 items-center justify-center rounded-full"
+                      className="glass flex size-11 items-center justify-center rounded-full"
                       aria-label="Закрыть"
                     >
                       <X className="size-5" />

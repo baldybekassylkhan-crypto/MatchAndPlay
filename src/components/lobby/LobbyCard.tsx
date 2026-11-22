@@ -78,5 +78,5 @@ export function StatusBadge({ tone, children }: { tone: "accent" | "muted" | "da
     danger: "bg-danger/15 text-danger",
     ink: "bg-ink text-bg",
   }[tone];
-  return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{children}</span>;
+  return <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{children}</span>;
 }

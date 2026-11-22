@@ -111,7 +111,7 @@ export function FilterSheet({
           <button
             onClick={onClose}
             onPointerDown={(e) => e.stopPropagation()}
-            className="flex size-9 items-center justify-center rounded-full bg-surface-2"
+            className="flex size-11 items-center justify-center rounded-full bg-surface-2"
             aria-label="Закрыть"
           >
             <X className="size-5" />
@@ -147,7 +147,7 @@ export function FilterSheet({
               type="date"
               min={today}
               aria-label="Конкретная дата"
-              className={clsx("chip h-[38px]", !isPreset && "chip-active")}
+              className={clsx("chip h-[38px] text-[16px]!", !isPreset && "chip-active")}
               value={isPreset ? "" : f.day}
               onChange={(e) => setF({ ...f, day: e.target.value || "any" })}
             />

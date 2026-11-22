@@ -71,7 +71,7 @@ export function Comments({
                   type="button"
                   onClick={() => remove(c.id)}
                   disabled={pending}
-                  className="flex size-8 shrink-0 items-center justify-center text-muted"
+                  className="-my-1.5 -mr-2 flex size-11 shrink-0 items-center justify-center text-muted"
                   aria-label="Удалить комментарий"
                 >
                   {removing === c.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}

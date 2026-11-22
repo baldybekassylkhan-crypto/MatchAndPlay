@@ -87,6 +87,59 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  /* Шрифт не «раздувается» при повороте телефона */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ───────────── Телефон ───────────── */
+
+html,
+body {
+  /* Страница не съезжает вбок от широких элементов; clip (а не hidden) не ломает sticky */
+  overflow-x: clip;
+}
+
+body {
+  /* Своё «потянуть, чтобы обновить» в ленте — без конфликта со встроенным в Chrome */
+  overscroll-behavior-y: none;
+}
+
+/* Кнопки и ссылки: без задержки двойного тапа и без системного меню при долгом нажатии */
+a,
+button,
+[role="button"],
+[role="tab"],
+label {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+button,
+[role="tab"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/*
+ * Открыта клавиатура (фокус в поле ввода, атрибут ставит KeyboardWatcher) —
+ * прячем нижнее меню, чтобы оно не закрывало поле, и убираем под него отступ.
+ */
+@media (pointer: coarse) {
+  html[data-keyboard] {
+    --nav-space: env(safe-area-inset-bottom);
+  }
+  html[data-keyboard] [data-bottom-nav] {
+    transform: translateY(calc(100% + 1rem));
+    pointer-events: none;
+  }
+}
+
+/* Горизонтальные ленты (чипы, вкладки, хайлайты) — без полосы прокрутки */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Плавные смены цвета у полей и ссылок по умолчанию */

@@ -29,7 +29,10 @@ export function BottomNav({ username }: { username: string }) {
 
   return (
     // «Парящее» стеклянное меню над контентом
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    <nav
+      data-bottom-nav
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-transform duration-200"
+    >
       <ul className="glass pointer-events-auto mx-auto grid h-16 max-w-[30rem] grid-cols-5 overflow-hidden rounded-[1.75rem]">
         {items.map(({ href, label, icon: Icon, active: routeActive, primary }) => {
           // Пока страница грузится, вкладка уже подсвечена — меню не «залипает»

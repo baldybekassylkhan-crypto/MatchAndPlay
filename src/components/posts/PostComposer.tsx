@@ -180,7 +180,7 @@ export function PostComposer({
                 <button
                   type="button"
                   onClick={() => remove(d.key)}
-                  className="absolute top-2 right-2 flex size-8 items-center justify-center rounded-full bg-black/60 text-white"
+                  className="absolute top-1.5 right-1.5 flex size-10 items-center justify-center rounded-full bg-black/60 text-white"
                   aria-label="Убрать"
                   disabled={busy !== null}
                 >

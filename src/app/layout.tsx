@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { KeyboardWatcher } from "@/components/KeyboardWatcher";
 import { MotionProvider } from "@/components/MotionProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
@@ -22,6 +23,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Android: при открытой клавиатуре страница сжимается, а не уезжает под неё
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
@@ -34,6 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${inter.variable} font-sans antialiased`}>
         <MotionProvider>{children}</MotionProvider>
         <ServiceWorkerRegister />
+        <KeyboardWatcher />
       </body>
     </html>
   );

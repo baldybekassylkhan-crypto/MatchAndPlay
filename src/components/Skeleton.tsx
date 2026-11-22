@@ -6,7 +6,7 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function HeaderSkeleton() {
   return (
-    <div className="flex h-14 items-center border-b border-line px-4">
+    <div className="flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center border-b border-line px-4 pt-[env(safe-area-inset-top)]">
       <Skeleton className="h-5 w-32" />
     </div>
   );
