@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAuthUserId } from "@/lib/supabase/auth-user";
 import { createClient } from "@/lib/supabase/server";
 
 async function requireUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId(supabase);
+  const user = userId ? { id: userId } : null;
   if (!user) redirect("/login");
   return { supabase, userId: user.id };
 }

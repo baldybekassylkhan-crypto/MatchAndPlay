@@ -28,9 +28,11 @@ export async function searchLobbies(
   const supabase = await createClient();
   const { from, to } = dayRange(filters.day);
 
+  const swipe = opts.mode === "swipe";
   let query = supabase
     .from("lobbies")
-    .select(LOBBY_SELECT)
+    // В свайпах сразу подтягиваем мои свайпы и заявки (отфильтрованы по мне ниже) — без второго запроса
+    .select(swipe ? `${LOBBY_SELECT}, my_swipe:swipes(user_id), my_app:lobby_applications(user_id)` : LOBBY_SELECT)
     .eq("city_id", cityId)
     .in("status", opts.mode === "swipe" ? ["active"] : ["active", "full"])
     .gt("start_time", from.toISOString())
@@ -42,7 +44,12 @@ export async function searchLobbies(
   if (filters.level) query = query.or(`level.is.null,level.eq.${filters.level}`);
   const pattern = likePattern(filters.q);
   if (pattern) query = query.or(`description.ilike.${pattern},location_name.ilike.${pattern}`);
-  if (opts.mode === "swipe") query = query.neq("organizer_id", opts.userId);
+  if (swipe) {
+    query = query
+      .neq("organizer_id", opts.userId)
+      .eq("my_swipe.user_id", opts.userId)
+      .eq("my_app.user_id", opts.userId);
+  }
 
   const { data } = await query;
   let lobbies = ((data as LobbyWithMeta[] | null) ?? []).filter((l) => {
@@ -53,17 +60,20 @@ export async function searchLobbies(
     return true;
   });
 
-  if (opts.mode === "swipe" && lobbies.length) {
-    const ids = lobbies.map((l) => l.id);
-    const [swiped, applied] = await Promise.all([
-      supabase.from("swipes").select("lobby_id").eq("user_id", opts.userId).in("lobby_id", ids),
-      supabase.from("lobby_applications").select("lobby_id").eq("user_id", opts.userId).in("lobby_id", ids),
-    ]);
-    const seen = new Set([...(swiped.data ?? []), ...(applied.data ?? [])].map((r) => r.lobby_id as string));
-    lobbies = lobbies.filter((l) => !seen.has(l.id));
+  if (opts.mode === "swipe") {
+    // Мои свайпы и заявки пришли вместе с лобби (см. select выше) — убираем уже просмотренные
+    lobbies = lobbies.filter((l) => {
+      const seen = l as LobbyWithMeta & { my_swipe?: unknown[]; my_app?: unknown[] };
+      return !seen.my_swipe?.length && !seen.my_app?.length;
+    });
   }
 
-  return lobbies;
+  return lobbies.map((l) => {
+    const { my_swipe: _s, my_app: _a, ...rest } = l as LobbyWithMeta & { my_swipe?: unknown; my_app?: unknown };
+    void _s;
+    void _a;
+    return rest as LobbyWithMeta;
+  });
 }
 
 /**

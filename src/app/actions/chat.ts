@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getAuthUserId } from "@/lib/supabase/auth-user";
 import { createClient } from "@/lib/supabase/server";
 
 export async function sendMessage(lobbyId: string, text: string) {
@@ -10,9 +11,8 @@ export async function sendMessage(lobbyId: string, text: string) {
   if (clean.length > 1000) return { ok: false, error: "Не больше 1000 символов" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId(supabase);
+  const user = userId ? { id: userId } : null;
   if (!user) redirect("/login");
 
   const { data, error } = await supabase

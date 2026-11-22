@@ -7,13 +7,13 @@ import { getMyProfile } from "@/lib/auth";
 import { MAX_POST_IMAGES, MAX_VIDEO_SECONDS, POSTS_BUCKET } from "@/lib/media";
 import { FEED_START, getFeedPage, type FeedCursor } from "@/lib/posts";
 import { SPORT_IDS } from "@/lib/sports";
+import { getAuthUserId } from "@/lib/supabase/auth-user";
 import { createClient } from "@/lib/supabase/server";
 
 async function requireUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId(supabase);
+  const user = userId ? { id: userId } : null;
   if (!user) redirect("/login");
   return { supabase, userId: user.id };
 }

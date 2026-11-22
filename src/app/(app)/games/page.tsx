@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { LobbyCard, StatusBadge } from "@/components/lobby/LobbyCard";
 import { PageHeader } from "@/components/PageHeader";
 import { TabLinks } from "@/components/ui/Segmented";
-import { getMyProfile } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
 import { SaveButton } from "@/components/lobby/SaveButton";
 import { getGameHistory, getMyApplications, getMyLobbies, getSavedLobbies } from "@/lib/lobbies";
 import { hasStarted, plural } from "@/lib/time";
@@ -29,7 +29,8 @@ const APP_BADGE: Record<ApplicationStatus, { tone: "accent" | "muted" | "danger"
 };
 
 export default async function GamesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const profile = await getMyProfile();
+  // Нужен только id — берём из токена, не дожидаясь загрузки профиля (его проверяет layout)
+  const profile = await getUser();
   if (!profile) redirect("/onboarding");
   const { tab: rawTab } = await searchParams;
   const tab: Tab = TABS.some((t) => t.id === rawTab) ? (rawTab as Tab) : "saved";

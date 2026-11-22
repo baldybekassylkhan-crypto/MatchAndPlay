@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAuthUserId } from "@/lib/supabase/auth-user";
 import { createClient } from "@/lib/supabase/server";
 import { fieldErrors, profileSchema } from "@/lib/validation";
 
@@ -14,9 +15,8 @@ const text = (v: FormDataEntryValue | null) => (typeof v === "string" ? v : "");
 
 export async function saveProfile(_prev: ProfileFormState, formData: FormData): Promise<ProfileFormState> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId(supabase);
+  const user = userId ? { id: userId } : null;
   if (!user) redirect("/login");
 
   const parsed = profileSchema.safeParse({
@@ -48,9 +48,8 @@ export async function saveProfile(_prev: ProfileFormState, formData: FormData): 
 
 export async function toggleFollow(targetId: string, follow: boolean) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId(supabase);
+  const user = userId ? { id: userId } : null;
   if (!user) redirect("/login");
   if (user.id === targetId) return { ok: false };
 

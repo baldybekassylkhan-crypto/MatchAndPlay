@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/env";
+import { getAuthUserId } from "@/lib/supabase/auth-user";
 
 // /api/push вызывает база данных — он защищён собственным секретом, а не сессией.
 const PUBLIC_PATHS = ["/login", "/auth", "/offline", "/api/push"];
@@ -28,9 +29,9 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Проверка подписи JWT на месте, без запроса к Supabase Auth (раньше ~0,3 с на каждую страницу)
+  const userId = await getAuthUserId(supabase);
+  const user = userId ? { id: userId } : null;
 
   const path = request.nextUrl.pathname;
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAuthUserId } from "@/lib/supabase/auth-user";
 import { createClient } from "@/lib/supabase/server";
 import { fromKzInputs } from "@/lib/time";
 import { fieldErrors, lobbySchema } from "@/lib/validation";
@@ -70,9 +71,8 @@ function parseLobbyForm(formData: FormData) {
 
 async function requireUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId(supabase);
+  const user = userId ? { id: userId } : null;
   if (!user) redirect("/login");
   return { supabase, user };
 }

@@ -14,13 +14,12 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const profile = await getMyProfile();
+  // Профиль, параметры и города — одновременно (города берутся из серверного кэша)
+  const [profile, params, cities] = await Promise.all([getMyProfile(), searchParams, getCities()]);
   if (!profile) redirect("/onboarding");
 
-  const params = await searchParams;
   const parsed = parseFilters(params);
   const mode = parseMode(params);
-  const cities = await getCities();
   const cityId = cities.some((c) => c.id === parsed.city) ? parsed.city! : profile.city_id;
   const filters = { ...parsed, city: cityId === profile.city_id && !parsed.city ? null : cityId };
 

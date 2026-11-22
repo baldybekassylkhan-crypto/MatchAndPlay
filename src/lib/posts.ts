@@ -24,69 +24,85 @@ export interface FeedCursor {
 
 export const FEED_START: FeedCursor = { a: null, b: null, c: null };
 
-type Supabase = Awaited<ReturnType<typeof createClient>>;
-
-async function withLikes(supabase: Supabase, userId: string, posts: Omit<PostWithMeta, "liked">[]) {
-  if (!posts.length) return [] as PostWithMeta[];
-  const { data } = await supabase
-    .from("likes")
-    .select("post_id")
-    .eq("user_id", userId)
-    .in(
-      "post_id",
-      posts.map((p) => p.id),
-    );
-  const liked = new Set((data ?? []).map((r) => r.post_id as string));
-  return posts.map((p) => ({ ...p, liked: liked.has(p.id) }));
-}
-
 const inList = (ids: string[]) => `(${ids.join(",")})`;
+
+/** На кого подписан пользователь (+ он сам). Один запрос на рендер — общий для ленты и кружков хайлайтов. */
+export const getFollowingIds = cache(async (userId: string): Promise<string[]> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("follows").select("following_id").eq("follower_id", userId).limit(2000);
+  return [userId, ...(data ?? []).map((r) => r.following_id as string)];
+});
+
+/** Лайк текущего пользователя приходит вместе с постом — без отдельного запроса. */
+const LIKED_BY_ME = ", my_like:likes(user_id)";
+type RawPost = Omit<PostWithMeta, "liked"> & { my_like?: { user_id: string }[] };
+const toPost = (p: RawPost, recommended?: boolean): PostWithMeta => {
+  const { my_like, ...rest } = p;
+  return { ...rest, liked: (my_like?.length ?? 0) > 0, ...(recommended !== undefined ? { recommended } : {}) };
+};
 
 export async function getFeedPage(
   userId: string,
   cityId: number,
   cursor: FeedCursor,
 ): Promise<{ posts: PostWithMeta[]; cursor: FeedCursor; done: boolean }> {
-  const supabase = await createClient();
-  const { data: followRows } = await supabase.from("follows").select("following_id").eq("follower_id", userId).limit(2000);
-  const mine = [userId, ...(followRows ?? []).map((r) => r.following_id as string)];
-
-  const next: FeedCursor = { ...cursor };
-  const out: (Omit<PostWithMeta, "liked">)[] = [];
+  const [supabase, mine] = await Promise.all([createClient(), getFollowingIds(userId)]);
 
   const streams = [
     {
       key: "a" as const,
       recommended: false,
-      build: () => supabase.from("posts").select(POST_SELECT).in("author_id", mine),
+      build: () => supabase.from("posts").select(POST_SELECT + LIKED_BY_ME).in("author_id", mine),
     },
     {
       key: "b" as const,
       recommended: true,
       build: () =>
-        supabase.from("posts").select(POST_SELECT_BY_CITY).eq("author.city_id", cityId).not("author_id", "in", inList(mine)),
+        supabase
+          .from("posts")
+          .select(POST_SELECT_BY_CITY + LIKED_BY_ME)
+          .eq("author.city_id", cityId)
+          .not("author_id", "in", inList(mine)),
     },
     {
       key: "c" as const,
       recommended: true,
       build: () =>
-        supabase.from("posts").select(POST_SELECT_BY_CITY).neq("author.city_id", cityId).not("author_id", "in", inList(mine)),
+        supabase
+          .from("posts")
+          .select(POST_SELECT_BY_CITY + LIKED_BY_ME)
+          .neq("author.city_id", cityId)
+          .not("author_id", "in", inList(mine)),
     },
   ];
 
-  for (const s of streams) {
-    if (out.length >= FEED_PAGE) break;
-    if (next[s.key] === "done") continue;
-    const want = FEED_PAGE - out.length;
-    let q = s.build().order("created_at", { ascending: false }).limit(want);
-    if (next[s.key]) q = q.lt("created_at", next[s.key]!);
-    const { data } = await q;
-    const rows = (data as Omit<PostWithMeta, "liked">[] | null) ?? [];
-    out.push(...rows.map((p) => ({ ...p, recommended: s.recommended })));
-    next[s.key] = rows.length < want ? "done" : rows[rows.length - 1].created_at;
-  }
+  // Все три потока одновременно (раньше — по очереди), затем заполняем страницу по приоритету.
+  const fetched = await Promise.all(
+    streams.map(async (s) => {
+      if (cursor[s.key] === "done") return [] as RawPost[];
+      let q = s
+        .build()
+        .eq("my_like.user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(FEED_PAGE);
+      if (cursor[s.key]) q = q.lt("created_at", cursor[s.key]!);
+      const { data } = await q;
+      return (data as unknown as RawPost[] | null) ?? [];
+    }),
+  );
 
-  const posts = await withLikes(supabase, userId, out);
+  const next: FeedCursor = { ...cursor };
+  const posts: PostWithMeta[] = [];
+  streams.forEach((s, i) => {
+    if (cursor[s.key] === "done") return;
+    const rows = fetched[i];
+    const taken = rows.slice(0, Math.max(0, FEED_PAGE - posts.length));
+    posts.push(...taken.map((p) => toPost(p, s.recommended)));
+    if (taken.length === rows.length && rows.length < FEED_PAGE) next[s.key] = "done";
+    else if (taken.length > 0) next[s.key] = taken[taken.length - 1].created_at;
+    // taken.length === 0 и поток не пуст — оставляем курсор как был, дойдём до него на следующей странице
+  });
+
   const done = next.a === "done" && next.b === "done" && next.c === "done";
   return { posts, cursor: next, done };
 }
@@ -94,10 +110,13 @@ export async function getFeedPage(
 export const getPost = cache(async (id: string, userId: string): Promise<PostWithMeta | null> => {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const supabase = await createClient();
-  const { data } = await supabase.from("posts").select(POST_SELECT).eq("id", id).maybeSingle();
-  if (!data) return null;
-  const [post] = await withLikes(supabase, userId, [data as Omit<PostWithMeta, "liked">]);
-  return post;
+  const { data } = await supabase
+    .from("posts")
+    .select(POST_SELECT + LIKED_BY_ME)
+    .eq("id", id)
+    .eq("my_like.user_id", userId)
+    .maybeSingle();
+  return data ? toPost(data as unknown as RawPost) : null;
 });
 
 export async function getComments(postId: string): Promise<Comment[]> {
@@ -128,9 +147,8 @@ export async function countPosts(authorId: string) {
 
 /** Кружки хайлайтов сверху ленты: кто из подписок недавно выложил моменты с игр. */
 export async function getHighlightAuthors(userId: string) {
-  const supabase = await createClient();
-  const { data: followRows } = await supabase.from("follows").select("following_id").eq("follower_id", userId).limit(2000);
-  const ids = [userId, ...(followRows ?? []).map((r) => r.following_id as string)];
+  // Тот же список подписок, что и у ленты — без повторного запроса
+  const [supabase, ids] = await Promise.all([createClient(), getFollowingIds(userId)]);
   const { data } = await supabase
     .from("posts")
     .select("author_id, created_at, author:profiles!posts_author_id_fkey(id, username, avatar_url)")
