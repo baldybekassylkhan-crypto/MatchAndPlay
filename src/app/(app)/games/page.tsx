@@ -1,4 +1,4 @@
-import { CalendarCheck, Heart, History, Inbox, Trophy } from "lucide-react";
+import { CalendarCheck, Camera, Heart, History, Inbox, Trophy } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
@@ -38,7 +38,7 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Мои игры" />
-      <div className="no-scrollbar sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 overflow-x-auto border-b border-line bg-bg px-4 py-3">
+      <div className="no-scrollbar sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 overflow-x-auto glass-bar px-4 py-2">
         <TabLinks
           layoutId="games-tab"
           items={TABS.map((t) => ({ href: `/games?tab=${t.id}`, label: t.label, active: tab === t.id }))}
@@ -61,7 +61,7 @@ async function Saved({ userId }: { userId: string }) {
       <EmptyState
         icon={Heart}
         title="Сохранённых игр нет"
-        text="Свайпните карточку вправо или нажмите ♥ на странице игры. Когда игра начнётся, отменится или заполнится, она исчезнет отсюда сама."
+        text="Свайпните карточку вправо или нажмите на сердце на странице игры. Когда игра начнётся, отменится или заполнится, она исчезнет отсюда сама."
         action={{ href: "/search?mode=swipe", label: "Листать игры" }}
       />
     );
@@ -152,7 +152,7 @@ async function HistoryList({ userId }: { userId: string }) {
       />
       {Date.now() - new Date(l.start_time).getTime() < 30 * 86_400_000 && (
         <Link href={`/create/post?lobby=${l.id}`} className="btn-secondary h-10 w-full text-sm">
-          📸 Выложить хайлайт с этой игры
+          <Camera className="size-4" /> Выложить хайлайт
         </Link>
       )}
     </div>

@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders },
       {
+        // Площадки меняются редко: телефон держит файл сутки и потом проверяет обновление
+        source: "/venues/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
+      {
         // Service worker всегда проверяется заново, чтобы обновления доходили сразу
         source: "/sw.js",
         headers: [

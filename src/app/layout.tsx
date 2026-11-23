@@ -1,15 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import { KeyboardWatcher } from "@/components/KeyboardWatcher";
 import { MotionProvider } from "@/components/MotionProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: { default: "Match&Play", template: "%s · Match&Play" },
@@ -26,7 +19,7 @@ export const viewport: Viewport = {
   // Android: при открытой клавиатуре страница сжимается, а не уезжает под неё
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
@@ -34,7 +27,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <MotionProvider>{children}</MotionProvider>
         <ServiceWorkerRegister />
         <KeyboardWatcher />

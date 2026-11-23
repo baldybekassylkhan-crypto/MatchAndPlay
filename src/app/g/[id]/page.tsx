@@ -9,6 +9,7 @@ import { getLobby } from "@/lib/lobbies";
 import { SPORTS } from "@/lib/sports";
 import { formatLongDate, formatPrice, formatShortDayTime, formatTime, hasStarted } from "@/lib/time";
 import { lobbySlots } from "@/lib/types";
+import { SportIcon } from "@/components/ui/SportIcon";
 
 export const dynamic = "force-dynamic";
 
@@ -55,8 +56,8 @@ export default async function SharedGamePage({ params }: { params: Params }) {
 
       <section className="mt-8 flex-1 space-y-5">
         <div>
-          <p className="text-5xl" aria-hidden>
-            {sport?.emoji}
+          <p className="text-accent" aria-hidden>
+            <SportIcon sport={lobby.sport} className="size-12" />
           </p>
           <h1 className="mt-3 text-3xl font-extrabold">{sport?.label ?? "Игра"}</h1>
           <p className="mt-2 text-lg whitespace-pre-line">{lobby.description}</p>

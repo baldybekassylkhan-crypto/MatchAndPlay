@@ -122,7 +122,7 @@ export function PlayerActions({
   return (
     <div className="space-y-3">
       {composing ? (
-        <div className="animate-fade-up space-y-2 rounded-2xl border border-line bg-surface p-4">
+        <div className="animate-fade-up space-y-2 card p-4">
           <label className="label" htmlFor="apply-message">
             Сообщение организатору (необязательно)
           </label>

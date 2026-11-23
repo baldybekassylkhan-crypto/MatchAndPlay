@@ -66,7 +66,7 @@ export function OrganizerCheckIn({ lobbyId, total }: { lobbyId: string; total: n
   }
 
   return (
-    <section className="animate-fade-up space-y-3 rounded-3xl border border-line bg-surface p-4 text-center">
+    <section className="animate-fade-up space-y-3 card p-4 text-center">
       <div className="flex items-center justify-between">
         <h2 className="font-bold">Отметка на игре</h2>
         <button type="button" onClick={() => setOpen(false)} className="flex size-10 items-center justify-center" aria-label="Скрыть QR">

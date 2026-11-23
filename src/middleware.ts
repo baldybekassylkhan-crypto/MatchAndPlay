@@ -8,6 +8,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Всё, кроме статики, иконок, манифеста и service worker
-    "/((?!_next/static|_next/image|favicon.ico|icons/|apple-icon|manifest.webmanifest|robots.txt|sw.js|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons/|venues/|apple-icon|manifest.webmanifest|robots.txt|sw.js|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
   ],
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Heart, Loader2, MapPin, RotateCcw, Users, X } from "lucide-react";
+import { Clock, Flag, Heart, Loader2, MapPin, RotateCcw, Users, X } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
@@ -10,6 +10,7 @@ import { SlotsBar } from "@/components/lobby/SlotsBar";
 import { SPORTS } from "@/lib/sports";
 import { formatDayTime, formatPrice } from "@/lib/time";
 import { LEVELS, type LobbyWithMeta } from "@/lib/types";
+import { SportIcon } from "@/components/ui/SportIcon";
 
 type Dir = "left" | "right";
 const SWIPE_DISTANCE = 110;
@@ -41,7 +42,7 @@ export function SwipeDeck({
       setGone((prev) => new Set(prev).add(current.lobby.id));
       void recordSwipe(current.lobby.id, dir);
       if (dir === "right") {
-        setToast("Сохранено ♥");
+        setToast("Сохранено");
         setTimeout(() => setToast(null), 1400);
       }
     },
@@ -61,7 +62,7 @@ export function SwipeDeck({
   if (!current) {
     return (
       <div className="flex flex-col items-center gap-3 px-8 py-14 text-center">
-        <div className="flex size-16 items-center justify-center rounded-3xl bg-surface-2 text-3xl">🏁</div>
+        <div className="flex size-16 items-center justify-center rounded-full bg-surface-2"><Flag className="size-7 text-muted" /></div>
         <h2 className="text-lg font-bold">Больше нет игр</h2>
         <p className="text-muted">Вы посмотрели все подходящие игры. Измените фильтры выше или загляните позже.</p>
         <div className="mt-2 flex flex-wrap justify-center gap-2">
@@ -104,18 +105,18 @@ export function SwipeDeck({
       <div className="mt-5 flex items-center justify-center gap-6">
         <button
           onClick={() => swipe("left")}
-          className="glass flex size-16 items-center justify-center rounded-full transition active:scale-90"
+          className="glass flex size-14 items-center justify-center rounded-full transition active:scale-90"
           aria-label="Не подходит"
         >
-          <X className="size-7 text-danger" strokeWidth={2.5} />
+          <X className="size-6 text-ink" strokeWidth={2} />
         </button>
         <span className="text-sm text-muted tabular-nums">ещё {deck.length}</span>
         <button
           onClick={() => swipe("right")}
-          className="glass-accent flex size-16 items-center justify-center rounded-full text-accent-ink transition active:scale-90"
+          className="flex size-14 items-center justify-center rounded-full bg-accent text-accent-ink transition active:scale-90"
           aria-label="Сохранить"
         >
-          <Heart className="size-7" strokeWidth={2.5} />
+          <Heart className="size-6" strokeWidth={2} />
         </button>
       </div>
       <p className="mt-3 text-center text-xs text-muted">Влево — не то, вправо — в сохранённые. Нажмите на карточку, чтобы открыть.</p>
@@ -126,7 +127,7 @@ export function SwipeDeck({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-bg"
+            className="glass fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-medium text-ink"
           >
             {toast}
           </motion.div>
@@ -181,15 +182,15 @@ function DraggableCard({
       <CardFace item={item}>
         <motion.span
           style={{ opacity: likeOpacity }}
-          className="absolute top-6 left-6 -rotate-12 rounded-xl border-4 border-accent px-3 py-1 text-2xl font-black text-accent"
+          className="glass absolute top-5 left-5 rounded-full px-3.5 py-1.5 text-[15px] font-semibold text-accent"
         >
-          ХОЧУ
+          Сохранить
         </motion.span>
         <motion.span
           style={{ opacity: nopeOpacity }}
-          className="absolute top-6 right-6 rotate-12 rounded-xl border-4 border-danger px-3 py-1 text-2xl font-black text-danger"
+          className="glass absolute top-5 right-5 rounded-full px-3.5 py-1.5 text-[15px] font-semibold text-ink"
         >
-          НЕ ТО
+          Пропустить
         </motion.span>
       </CardFace>
     </motion.div>
@@ -211,19 +212,17 @@ function CardFace({
 
   return (
     <div
-      className={`absolute inset-0 flex flex-col overflow-hidden rounded-[2rem] border border-line bg-surface shadow-xl select-none ${
+      className={`absolute inset-0 flex flex-col overflow-hidden rounded-[1.5rem] bg-surface shadow-[0_10px_34px_rgb(0_0_0/0.12)] select-none ${
         background ? "translate-y-3 scale-[0.95] opacity-70" : ""
       }`}
     >
       <div className="relative flex h-[38%] items-center justify-center bg-surface-2">
-        <span className="text-8xl drop-shadow-sm" aria-hidden>
-          {sport?.emoji}
-        </span>
-        <span className="absolute bottom-3 left-4 rounded-full bg-black/70 px-3 py-1 text-sm font-bold text-white">
+        <SportIcon sport={lobby.sport} className="size-20 text-muted" strokeWidth={1.2} />
+        <span className="absolute bottom-3 left-4 glass rounded-full px-3 py-1 text-sm font-semibold text-ink">
           {sport?.label}
         </span>
         {km != null && (
-          <span className="absolute right-4 bottom-3 rounded-full bg-black/70 px-3 py-1 text-sm font-semibold text-white">
+          <span className="absolute right-4 bottom-3 glass rounded-full px-3 py-1 text-sm font-medium text-ink">
             {km < 1 ? `${Math.round(km * 1000)} м` : `${km.toFixed(1).replace(".", ",")} км`}
           </span>
         )}

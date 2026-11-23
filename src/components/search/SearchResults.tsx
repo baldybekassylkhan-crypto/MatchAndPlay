@@ -112,7 +112,7 @@ export function SearchResults({
             </h2>
           ) : (
             <p className="rounded-2xl bg-surface-2 p-4 text-sm">
-              Точных совпадений нет, но есть похожие варианты 👇
+              Точных совпадений нет, но есть похожие варианты
             </p>
           )}
           {items.map(card)}

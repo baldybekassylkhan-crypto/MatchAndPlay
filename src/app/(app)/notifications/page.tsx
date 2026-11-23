@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { MarkRead } from "@/components/notifications/MarkRead";
+import { NotificationIcon } from "@/components/notifications/NotificationIcon";
 import { PushToggle } from "@/components/notifications/PushToggle";
 import { PageHeader } from "@/components/PageHeader";
 import { getUser } from "@/lib/auth";
@@ -63,7 +64,7 @@ function Group({ title, items }: { title: string; items: AppNotification[] }) {
                 {n.payload.actor ? (
                   <Avatar src={n.payload.actor_avatar} name={n.payload.actor} size={44} />
                 ) : (
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xl">{r.emoji}</span>
+                  <NotificationIcon name={r.icon} />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px]">

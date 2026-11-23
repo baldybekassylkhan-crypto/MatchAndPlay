@@ -34,6 +34,8 @@ export async function searchLobbies(
     // В свайпах сразу подтягиваем мои свайпы и заявки (отфильтрованы по мне ниже) — без второго запроса
     .select(swipe ? `${LOBBY_SELECT}, my_swipe:swipes(user_id), my_app:lobby_applications(user_id)` : LOBBY_SELECT)
     .eq("city_id", cityId)
+    // Матчи между командами закрыты для остальных игроков
+    .is("crew_challenge_id", null)
     .in("status", opts.mode === "swipe" ? ["active"] : ["active", "full"])
     .gt("start_time", from.toISOString())
     .lt("start_time", to.toISOString())

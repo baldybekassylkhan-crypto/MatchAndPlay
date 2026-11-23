@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { MapView } from "@/components/map/Map";
+import { CrewMatchJoin } from "@/components/crews/CrewMatchJoin";
 import { OrganizerCheckIn } from "@/components/lobby/OrganizerCheckIn";
 import { OrganizerPanel } from "@/components/lobby/OrganizerPanel";
 import { PlayerActions } from "@/components/lobby/PlayerActions";
@@ -13,6 +14,7 @@ import { SlotsBar } from "@/components/lobby/SlotsBar";
 import { PageHeader } from "@/components/PageHeader";
 import { getUser } from "@/lib/auth";
 import { isCheckinOpen } from "@/lib/checkin";
+import { getCrewMatch } from "@/lib/crews";
 import { getLobby, getLobbyApplications, getLobbyCheckinIds, isLobbySaved } from "@/lib/lobbies";
 import { SaveButton } from "@/components/lobby/SaveButton";
 import { SPORTS } from "@/lib/sports";
@@ -40,11 +42,13 @@ export default async function LobbyPage({
   if (!lobby) notFound();
 
   const isOrganizer = user?.id === lobby.organizer_id;
-  const [apps, saved, checkinIds] = await Promise.all([
+  const [apps, saved, checkinIds, crewMatch] = await Promise.all([
     getLobbyApplications(lobby.id),
     user && !isOrganizer ? isLobbySaved(user.id, lobby.id) : Promise.resolve(false),
     getLobbyCheckinIds(lobby.id),
+    lobby.crew_challenge_id && user ? getCrewMatch(lobby.crew_challenge_id, user.id) : Promise.resolve(null),
   ]);
+  const isCrewMatch = Boolean(lobby.crew_challenge_id);
   const myApp = apps.find((a) => a.user_id === user?.id) ?? null;
   const accepted = apps.filter((a) => a.status === "accepted");
   const pendingApps = apps.filter((a) => a.status === "pending");
@@ -59,9 +63,9 @@ export default async function LobbyPage({
   return (
     <>
       <PageHeader
-        title={`${sport?.emoji ?? ""} ${sport?.label ?? "Игра"}`}
+        title={sport?.label ?? "Игра"}
         back="/search"
-        right={!isOrganizer && open ? <SaveButton lobbyId={lobby.id} initialSaved={saved} /> : undefined}
+        right={!isOrganizer && open && !isCrewMatch ? <SaveButton lobbyId={lobby.id} initialSaved={saved} /> : undefined}
       />
 
       <div className="space-y-6 px-5 pt-5 pb-10">
@@ -75,6 +79,18 @@ export default async function LobbyPage({
         )}
         {live && started && <p className="rounded-2xl bg-surface-2 p-4 font-semibold">Игра уже началась</p>}
         {lobby.status === "finished" && <p className="rounded-2xl bg-surface-2 p-4 font-semibold">Игра завершена</p>}
+        {crewMatch && (
+          <p className="rounded-2xl bg-surface-2 p-4 font-semibold">
+            Матч команд:{" "}
+            <Link href={`/crews/${crewMatch.challenge.from_crew_id}`} className="underline">
+              {crewMatch.challenge.from_crew?.name}
+            </Link>{" "}
+            —{" "}
+            <Link href={`/crews/${crewMatch.challenge.to_crew_id}`} className="underline">
+              {crewMatch.challenge.to_crew?.name}
+            </Link>
+          </p>
+        )}
 
         <section className="space-y-3">
           <p className="text-lg whitespace-pre-line">{lobby.description}</p>
@@ -114,10 +130,10 @@ export default async function LobbyPage({
           />
         )}
 
-        {open && (
+        {open && !isCrewMatch && (
           <ShareGameButton
             lobbyId={lobby.id}
-            text={`${sport?.emoji ?? ""} ${sport?.label ?? "Игра"}, ${formatLongDate(lobby.start_time)} в ${formatTime(lobby.start_time)}, ${lobby.location_name}. Присоединяйся!`.trim()}
+            text={`${sport?.label ?? "Игра"}, ${formatLongDate(lobby.start_time)} в ${formatTime(lobby.start_time)}, ${lobby.location_name}. Присоединяйся!`.trim()}
           />
         )}
 
@@ -127,7 +143,10 @@ export default async function LobbyPage({
           </Link>
         )}
 
-        {!isOrganizer && (
+        {isCrewMatch && !isOrganizer && open && crewMatch?.canJoin && myApp?.status !== "accepted" && myApp?.status !== "rejected" && (
+          <CrewMatchJoin lobbyId={lobby.id} full={lobby.status === "full"} />
+        )}
+        {!isOrganizer && (!isCrewMatch || myApp?.status === "accepted") && (
           <PlayerActions
             lobbyId={lobby.id}
             startTime={lobby.start_time}
@@ -143,7 +162,7 @@ export default async function LobbyPage({
 
         <section>
           <h2 className="mb-2 font-bold">Участники</h2>
-          <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+          <ul className="divide-y divide-line card">
             {lobby.organizer && (
               <PersonRow
                 username={lobby.organizer.username}

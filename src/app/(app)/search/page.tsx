@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CitySwitcher } from "@/components/CitySwitcher";
 import { PageHeader } from "@/components/PageHeader";
 import { SearchControls } from "@/components/search/SearchControls";
+import { SearchMapView } from "@/components/search/SearchMapView";
 import { SearchResults } from "@/components/search/SearchResults";
 import { getCities, getMyProfile } from "@/lib/auth";
 import { countActiveFilters, filtersToQuery, parseFilters, parseMode } from "@/lib/filters";
@@ -31,6 +32,30 @@ export default async function SearchPage({
     : { main: await searchLobbies(filters, cityId, opts), similar: [] };
 
   const query = filtersToQuery(filters);
+  const listHref = `/search${filtersToQuery(filters, "list")}`;
+  const city = cities.find((c) => c.id === cityId);
+
+  if (mode === "map" && city) {
+    return (
+      <SearchMapView
+        key={cityId}
+        lobbies={main}
+        similar={similar}
+        filters={filters}
+        cityId={cityId}
+        center={{ lat: city.lat, lng: city.lng }}
+        listHref={listHref}
+        controls={
+          <>
+            <div className="flex justify-end px-4 pt-3">
+              <CitySwitcher cities={cities} value={cityId} />
+            </div>
+            <SearchControls key={query} filters={filters} mode={mode} cities={cities} cityId={cityId} />
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <>
@@ -44,7 +69,7 @@ export default async function SearchPage({
         filters={filters}
         mode={mode}
         myId={profile.id}
-        listHref={`/search${filtersToQuery(filters, "list")}`}
+        listHref={listHref}
         hasFilters={countActiveFilters(filters) > 0 || Boolean(filters.q || filters.ai)}
       />
     </>

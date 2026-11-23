@@ -11,6 +11,7 @@ import { SportGrid } from "@/components/ui/SportGrid";
 import type { SportId } from "@/lib/sports";
 import { toKzInputs } from "@/lib/time";
 import { LEVELS, type City, type Lobby, type SkillLevel } from "@/lib/types";
+import type { VenuePrefill } from "@/lib/venues";
 
 const DEFAULT_DURATION_MIN = 90;
 const initialState: LobbyFormState = { error: null };
@@ -31,11 +32,14 @@ export function LobbyForm({
   defaultCityId,
   defaultSport,
   lobby,
+  venue,
 }: {
   cities: City[];
   defaultCityId: number;
   defaultSport?: SportId;
   lobby?: Lobby;
+  /** Игра собирается с площадки на карте: место и точка уже заполнены */
+  venue?: VenuePrefill | null;
 }) {
   const [state, formAction, pending] = useActionState(saveLobby, initialState);
   const start = useMemo(() => (lobby ? toKzInputs(lobby.start_time) : defaultStart()), [lobby]);
@@ -48,7 +52,7 @@ export function LobbyForm({
   const duration = lobby?.duration_min ?? DEFAULT_DURATION_MIN;
   const [cityId, setCityId] = useState<number>(lobby?.city_id ?? defaultCityId);
   const [point, setPoint] = useState<LatLng | null>(
-    lobby?.lat != null && lobby?.lng != null ? { lat: lobby.lat, lng: lobby.lng } : null,
+    lobby?.lat != null && lobby?.lng != null ? { lat: lobby.lat, lng: lobby.lng } : venue ? { lat: venue.lat, lng: venue.lng } : null,
   );
   const [level, setLevel] = useState<SkillLevel | null>(lobby?.level ?? null);
   const f = state.fields ?? {};
@@ -65,6 +69,15 @@ export function LobbyForm({
       <input type="hidden" name="level" value={level ?? ""} />
       <input type="hidden" name="lat" value={point?.lat ?? ""} />
       <input type="hidden" name="lng" value={point?.lng ?? ""} />
+
+      {venue && !lobby && (
+        <p className="flex items-start gap-2 rounded-2xl bg-surface-2 p-3 text-sm">
+          <MapPin className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Игра на площадке <b>{venue.place}</b>. Место и точка на карте уже заполнены.
+          </span>
+        </p>
+      )}
 
       <div>
         <span className="label">Вид спорта</span>
@@ -147,7 +160,7 @@ export function LobbyForm({
           id="location_name"
           name="location_name"
           className="input"
-          defaultValue={lobby?.location_name ?? ""}
+          defaultValue={lobby?.location_name ?? venue?.place ?? ""}
           placeholder="Стадион «Динамо», поле №2"
           maxLength={120}
           required

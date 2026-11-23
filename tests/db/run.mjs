@@ -35,7 +35,7 @@ create function net.http_post(url text, body jsonb, headers jsonb, timeout_milli
 `;
 await db.exec(stubs);
 
-for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "migrations/0009_checkin_feed.sql", "seed.sql"]) {
+for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "migrations/0009_checkin_feed.sql", "migrations/0010_crews_messages.sql", "migrations/0011_tournaments.sql", "seed.sql"]) {
   let sql = readFileSync(path.join(dir, f), "utf8");
   sql = sql
     .replace(/create extension if not exists pg_cron[^;]*;/, "")
@@ -471,6 +471,259 @@ check(feedGames.length > 0 && inFeed === feedGames.length, "конец лент�
 await q(`select apply_to_lobby($1, null)`, [L32]);
 feedGames = (await q(`select get_feed_game_ids(10) as id`)).map((r) => r.id);
 check(!feedGames.includes(L32), "конец ленты: игра с моей заявкой скрыта");
+
+// Этап 10: команды, чаты, вызовы
+const one1 = async (sql, params) => Object.values((await q(sql, params))[0])[0];
+const makeCrew = (name, open = true) =>
+  one1(`select create_crew($1, 'Описание', 'football', 1::smallint, $2)`, [name, open]);
+const memberStatus = async (crew, uid) => (await q(`select status from crew_members where crew_id = $1 and user_id = $2`, [crew, uid]))[0]?.status;
+const crewConv = async (crew) => (await q(`select id from conversations where crew_id = $1`, [crew]))[0].id;
+const inConv = async (conv, uid) => (await q(`select is_conversation_member($1, $2) as m`, [conv, uid]))[0].m;
+const say = (conv, uid, text) => q(`insert into chat_messages(conversation_id, user_id, text) values ($1, $2, $3)`, [conv, uid, text]);
+
+// Тесты идут от суперпользователя, который обходит RLS; для проверки политик переключаемся на роль приложения
+await db.exec(`grant usage on schema public, auth to authenticated;
+  grant select, insert on chat_messages to authenticated;
+  grant select on conversations, conversation_members, blocks, crews, crew_members, crew_challenges to authenticated;`);
+const rls = async (fn) => {
+  await db.exec("set role authenticated");
+  try {
+    return await fn();
+  } finally {
+    await db.exec("reset role");
+  }
+};
+
+await as(ME);
+const C1 = await makeCrew("Тестовая команда");
+await expectErr("название команды уникально", () => makeCrew("тестовая КОМАНДА"), "crew_name_taken");
+const C1conv = await crewConv(C1);
+check(await inConv(C1conv, ME), "создатель команды сразу в групповом чате");
+await as(THIRD);
+check((await one1(`select join_crew($1)`, [C1])) === "active", "в открытую команду вступают сразу");
+check(await inConv(C1conv, THIRD), "новый участник попал в групповой чат");
+await as(null);
+check((await q(`select member_count from crews where id = $1`, [C1]))[0].member_count === 2, "счётчик участников считается базой");
+await as(OTHER);
+await expectErr("чужой не может писать в чат команды", () => rls(() => say(C1conv, OTHER, "Привет")), "row-level security");
+await expectErr("нельзя писать от чужого имени", () => rls(() => say(C1conv, ME, "Подделка")), "row-level security");
+await expectErr("не капитан не может убрать игрока", () => q(`select remove_crew_member($1, $2)`, [C1, THIRD]), "not_captain");
+
+// Закрытая команда
+await as(ORG);
+const C2 = await makeCrew("Закрытая команда", false);
+await as(OTHER);
+check((await one1(`select join_crew($1)`, [C2])) === "pending", "в закрытую команду — по заявке");
+check(!(await inConv(await (async () => { await as(null); const id = await crewConv(C2); await as(OTHER); return id; })(), OTHER)), "заявка не даёт доступа к чату");
+await as(ORG);
+await q(`select decide_crew_member($1, $2, true)`, [C2, OTHER]);
+check((await memberStatus(C2, OTHER)) === "active", "капитан принял заявку");
+await q(`select remove_crew_member($1, $2)`, [C2, OTHER]);
+check((await memberStatus(C2, OTHER)) === "removed", "капитан убрал игрока");
+await as(OTHER);
+await expectErr("убранный игрок не может вернуться сам", () => q(`select join_crew($1)`, [C2]), "crew_removed");
+
+// Групповой чат
+await as(null);
+await q(`delete from notifications where type in ('crew_message', 'direct_message')`);
+await as(ME);
+await say(C1conv, ME, "Всем привет");
+await say(C1conv, ME, "Кто завтра?");
+const crewNotes = await notes(THIRD, "crew_message");
+check(crewNotes.length === 1 && crewNotes[0].crew_name === "Тестовая команда", "групповой чат: одно уведомление на серию");
+await as(THIRD);
+check((await one1(`select unread_chat_count()`)) === 1, "счётчик непрочитанных чатов");
+await q(`select mark_conversation_read($1)`, [C1conv]);
+check((await one1(`select unread_chat_count()`)) === 0, "чат прочитан");
+check((await notes(THIRD, "crew_message")).length === 1 && (await q(`select count(*)::int n from notifications where user_id = $1 and type = 'crew_message' and not read`, [THIRD]))[0].n === 0, "прочитанный чат гасит уведомление");
+
+// Личные сообщения
+const FOURTH = "44444444-4444-4444-8444-444444444444";
+await as(null);
+await db.exec(`insert into auth.users(id, email) values ('${FOURTH}', 'fourth@x.kz')`);
+await as(FOURTH);
+await db.exec(`insert into profiles(id, username, city_id, sports, level) values ('${FOURTH}', 'fourth', 1, '{football}', 'amateur')`);
+await expectErr("незнакомцу написать нельзя", () => q(`select start_direct_chat($1)`, [ME]), "cannot_message");
+await as(ME);
+await q(`insert into follows(follower_id, following_id) values ($1, $2) on conflict do nothing`, [ME, FOURTH]);
+await as(FOURTH);
+const D1 = await one1(`select start_direct_chat($1)`, [ME]);
+check((await one1(`select start_direct_chat($1)`, [ME])) === D1, "у пары только один личный чат");
+await say(D1, FOURTH, "Привет, сыграем?");
+check((await notes(ME, "direct_message")).length === 1, "личное сообщение → уведомление");
+await as(ME);
+await say(D1, ME, "Давай");
+const myChats = (await q(`select get_my_conversations() as c`)).map((r) => r.c);
+const dm = myChats.find((c) => c.id === D1);
+check(dm?.other?.username === "fourth" && dm?.last_text === "Давай", "список чатов показывает собеседника и последнее сообщение");
+await as(THIRD);
+const leaked = await rls(async () => (await q(`select count(*)::int n from chat_messages where conversation_id = $1`, [D1]))[0].n);
+check(leaked === 0, "посторонний не видит личные сообщения", leaked);
+await as(ME);
+const visible = await rls(async () => (await q(`select count(*)::int n from chat_messages where conversation_id = $1`, [D1]))[0].n);
+check(visible === 2, "участник видит свой личный чат", visible);
+await as(ME);
+await q(`select block_user($1)`, [FOURTH]);
+await expectErr("заблокированному нельзя написать", () => say(D1, ME, "Эй"), "user_blocked");
+await as(FOURTH);
+await expectErr("заблокированный не может написать", () => say(D1, FOURTH, "Эй"), "user_blocked");
+check(!(await q(`select get_my_conversations() as c`)).some((r) => r.c.id === D1), "заблокированный диалог скрыт из списка");
+await as(ME);
+await q(`delete from blocks where blocker_id = $1 and blocked_id = $2`, [ME, FOURTH]);
+
+// Вызовы
+await as(FOURTH);
+const C3 = await makeCrew("Соперники");
+await as(OTHER);
+await expectErr("вызвать может только капитан", () => q(`select create_crew_challenge($1, $2, now() + interval '1 day', 'Поле', 5::smallint, null)`, [C1, C3]), "not_captain");
+await as(ME);
+await expectErr("вызов не раньше чем за час", () => q(`select create_crew_challenge($1, $2, now() + interval '10 minutes', 'Поле', 5::smallint, null)`, [C1, C3]), "bad_challenge_time");
+const CH1 = await one1(`select create_crew_challenge($1, $2, now() + interval '1 day', 'Поле', 2::smallint, 'Сыграем?')`, [C1, C3]);
+await expectErr("второй открытый вызов нельзя", () => q(`select create_crew_challenge($1, $2, now() + interval '2 days', 'Поле', 2::smallint, null)`, [C1, C3]), "challenge_exists");
+check((await notes(FOURTH, "crew_challenge")).length === 1, "капитан соперников получил вызов");
+await expectErr("свой вызов не принять", () => q(`select respond_crew_challenge($1, true)`, [CH1]), "not_captain");
+await as(FOURTH);
+const ML = await one1(`select respond_crew_challenge($1, true)`, [CH1]);
+const matchRow = (await q(`select organizer_id, accepted_count, players_needed, crew_challenge_id, status from lobbies where id = $1`, [ML]))[0];
+check(matchRow.organizer_id === ME && matchRow.accepted_count === 1 && matchRow.players_needed === 3 && matchRow.crew_challenge_id === CH1, "принятый вызов создал игру", matchRow);
+check((await notes(THIRD, "crew_match")).length === 1, "участники команд узнали о матче");
+await as(OTHER);
+await expectErr("посторонний не может подать заявку на матч", () => q(`select apply_to_lobby($1, null)`, [ML]), "crew_match_only");
+await expectErr("посторонний не может вступить в матч", () => q(`select join_crew_match($1)`, [ML]), "crew_match_only");
+await as(THIRD);
+await q(`select join_crew_match($1)`, [ML]);
+await q(`select join_crew_match($1)`, [ML]);
+check((await lobbyRow(ML)).accepted_count === 2, "игрок команды вступил в матч, повтор не считается дважды");
+check(await mem(ML, THIRD), "участник матча получил доступ к чату игры");
+await as(ME);
+check(!(await q(`select get_feed_game_ids(10) as id`)).some((r) => r.id === ML), "матч команд не показывается среди открытых игр");
+await q(`update lobbies set crew_challenge_id = null where id = $1`, [ML]);
+check((await q(`select crew_challenge_id from lobbies where id = $1`, [ML]))[0].crew_challenge_id === CH1, "организатор не может открыть матч для всех");
+const CH2 = await one1(`select create_crew_challenge($1, $2, now() + interval '2 days', 'Зал', 3::smallint, null)`, [C1, C3]);
+await as(FOURTH);
+await q(`select respond_crew_challenge($1, false)`, [CH2]);
+check((await q(`select status from crew_challenges where id = $1`, [CH2]))[0].status === "declined", "вызов можно отклонить");
+
+// Капитан уходит, удаление аккаунта
+await as(ME);
+await q(`select leave_crew($1)`, [C1]);
+await as(null);
+let crewRow = (await q(`select captain_id, member_count from crews where id = $1`, [C1]))[0];
+check(crewRow.captain_id === THIRD && crewRow.member_count === 1, "капитан ушёл — капитаном стал следующий", crewRow);
+await db.exec(`insert into crew_members(crew_id, user_id, status) values ('${C1}', '${OTHER}', 'active') on conflict (crew_id, user_id) do update set status = 'active'`);
+await q(`delete from auth.users where id = $1`, [THIRD]);
+crewRow = (await q(`select captain_id from crews where id = $1`, [C1]))[0];
+check(crewRow?.captain_id === OTHER, "удаление аккаунта передаёт капитанство", crewRow);
+await q(`delete from auth.users where id = $1`, [OTHER]);
+check((await q(`select count(*)::int n from crews where id = $1`, [C1]))[0].n === 0, "команда без участников удаляется");
+
+// Этап 11: турниры, модерация, сетка
+await db.exec(`grant select on tournaments, tournament_teams, tournament_matches, tournament_contacts, app_admins to authenticated;`);
+const ADMIN = "a0000000-0000-4000-8000-000000000001";
+const HOST = "a0000000-0000-4000-8000-000000000002";
+const CAPS = [3, 4, 5, 6, 7].map((n) => `a0000000-0000-4000-8000-00000000000${n}`);
+await as(null);
+for (const [i, id] of [ADMIN, HOST, ...CAPS].entries()) {
+  await db.exec(`insert into auth.users(id, email) values ('${id}', 't${i}@x.kz');
+    insert into profiles(id, username, city_id, sports, level) values ('${id}', 'tour_user${i}', 1, '{football}', 'amateur');`);
+}
+await db.exec(`insert into app_admins(user_id) values ('${ADMIN}')`);
+
+const saveT = (id = null, name = "Кубок города") => one1(
+  `select save_tournament($1, $2, 'Открытый турнир для любителей', 'Правила', 'football', 1::smallint, 'Стадион', 43.2, 76.9,
+    now() + interval '5 days', now() + interval '3 days', 8::smallint, 5::smallint, 1000, 'Кубок', '+7 700 000 00 00')`, [id, name]);
+const tStatus = async (id) => (await q(`select status from tournaments where id = $1`, [id]))[0].status;
+const canSee = async (id) => rls(async () => (await q(`select count(*)::int n from tournaments where id = $1`, [id]))[0].n === 1);
+
+await as(HOST);
+const T1 = await saveT();
+check((await tStatus(T1)) === "pending", "новый турнир уходит на модерацию");
+check((await notes(ADMIN, "tournament_review")).length === 1, "модератор получил заявку");
+await as(CAPS[0]);
+check(!(await canSee(T1)), "турнир на модерации не виден другим");
+await expectErr("на неодобренный турнир нельзя записаться", () => q(`select register_tournament_team($1, 'Рано', null)`, [T1]), "tournament_not_found");
+await expectErr("обычный игрок не может одобрить", () => q(`select review_tournament($1, true, null)`, [T1]), "not_admin");
+await expectErr("организатор не может одобрить свой турнир", async () => { await as(HOST); await q(`select review_tournament($1, true, null)`, [T1]); }, "not_admin");
+await as(CAPS[0]);
+await expectErr("нельзя назначить себя админом", () => rls(() => q(`insert into app_admins(user_id) values ($1)`, [CAPS[0]])), "permission denied");
+check((await rls(async () => (await q(`select count(*)::int n from tournament_contacts where tournament_id = $1`, [T1]))[0].n)) === 0, "контакт организатора скрыт");
+await as(ADMIN);
+check(await canSee(T1), "модератор видит заявку");
+check((await rls(async () => (await q(`select count(*)::int n from tournament_contacts where tournament_id = $1`, [T1]))[0].n)) === 1, "модератор видит контакт");
+await expectErr("отказ требует причину", () => q(`select review_tournament($1, false, '  ')`, [T1]), "reason_required");
+await q(`select review_tournament($1, false, 'Укажите точный адрес')`, [T1]);
+check((await tStatus(T1)) === "rejected" && (await notes(HOST, "tournament_rejected"))[0]?.text === "Укажите точный адрес", "организатор получил причину отказа");
+await as(HOST);
+await saveT(T1, "Кубок города 2");
+check((await tStatus(T1)) === "pending" && (await notes(ADMIN, "tournament_review")).length === 2, "исправленный турнир снова на модерации");
+await as(CAPS[0]);
+await expectErr("чужой турнир не исправить", () => saveT(T1), "not_organizer");
+await as(ADMIN);
+await q(`select review_tournament($1, true, null)`, [T1]);
+check((await tStatus(T1)) === "registration" && (await notes(HOST, "tournament_approved")).length === 1, "турнир одобрен и открыта регистрация");
+await as(HOST);
+await expectErr("одобренный турнир нельзя тихо изменить", () => saveT(T1), "tournament_locked");
+await expectErr("для старта нужно минимум 2 команды", () => q(`select start_tournament($1)`, [T1]), "not_enough_teams");
+
+// Регистрация: 5 команд → сетка на 8 с 3 свободными проходами
+const teamIds = [];
+for (const [i, cap] of CAPS.entries()) {
+  await as(cap);
+  teamIds.push(await one1(`select register_tournament_team($1, $2, null)`, [T1, `Команда ${i + 1}`]));
+}
+await expectErr("капитан записывается один раз", () => q(`select register_tournament_team($1, 'Ещё', null)`, [T1]), "already_registered");
+await as(ADMIN);
+await expectErr("название команды уникально", () => q(`select register_tournament_team($1, 'команда 1', null)`, [T1]), "team_name_taken");
+await as(CAPS[0]);
+await expectErr("капитан не может запустить турнир", () => q(`select start_tournament($1)`, [T1]), "not_organizer");
+await as(HOST);
+await q(`select start_tournament($1)`, [T1]);
+const matches = async () => q(`select * from tournament_matches where tournament_id = $1 order by round, position`, [T1]);
+let ms = await matches();
+check(ms.length === 7 && ms.filter((m) => m.round === 1).length === 4 && ms.filter((m) => m.round === 3).length === 1, "сетка на 5 команд: 4+2+1 матч", ms.length);
+check(ms.filter((m) => m.status === "bye").length === 3, "3 свободных прохода");
+const placed = ms.filter((m) => m.round === 1).flatMap((m) => [m.team_a_id, m.team_b_id]).filter(Boolean);
+check(new Set(placed).size === 5, "каждая команда в сетке ровно один раз");
+check(ms.filter((m) => m.round === 2).flatMap((m) => [m.team_a_id, m.team_b_id]).filter(Boolean).length === 3, "свободные проходы сразу во втором раунде");
+await as(CAPS[0]);
+await expectErr("после старта не записаться", () => q(`select register_tournament_team($1, 'Поздно', null)`, [T1]), "registration_closed");
+await as(CAPS[1]);
+await expectErr("капитан не вводит результат", () => q(`select report_tournament_match($1, 1::smallint, 0::smallint, null)`, [ms.find((m) => m.status === "ready").id]), "not_organizer");
+
+await as(HOST);
+const ready = ms.find((m) => m.round === 1 && m.status === "ready");
+await expectErr("при ничьей нужен победитель", () => q(`select report_tournament_match($1, 2::smallint, 2::smallint, null)`, [ready.id]), "winner_required");
+await expectErr("победитель должен быть из этого матча", () => q(`select report_tournament_match($1, 2::smallint, 2::smallint, $2)`, [ready.id, teamIds.find((t) => t !== ready.team_a_id && t !== ready.team_b_id)]), "winner_required");
+await q(`select report_tournament_match($1, 2::smallint, 2::smallint, $2)`, [ready.id, ready.team_b_id]);
+ms = await matches();
+const nextOf = (m) => ms.find((x) => x.round === m.round + 1 && x.position === Math.floor(m.position / 2));
+check([nextOf(ready).team_a_id, nextOf(ready).team_b_id].includes(ready.team_b_id), "победитель по пенальти прошёл дальше");
+await q(`select report_tournament_match($1, 3::smallint, 1::smallint, null)`, [ready.id]);
+ms = await matches();
+const fixedNext = nextOf(ready);
+check([fixedNext.team_a_id, fixedNext.team_b_id].includes(ready.team_a_id) && ![fixedNext.team_a_id, fixedNext.team_b_id].includes(ready.team_b_id), "исправленный результат меняет соперника в следующем раунде");
+
+for (const round of [2, 3]) {
+  ms = await matches();
+  for (const m of ms.filter((x) => x.round === round)) {
+    await q(`select report_tournament_match($1, 1::smallint, 0::smallint, null)`, [m.id]);
+  }
+}
+ms = await matches();
+const finalM = ms.find((m) => m.round === 3);
+const tRow = (await q(`select status, winner_team_id from tournaments where id = $1`, [T1]))[0];
+check(tRow.status === "finished" && tRow.winner_team_id === finalM.team_a_id, "финал завершает турнир и определяет чемпиона");
+check((await notes(CAPS[0], "tournament_finished")).length === 1, "капитаны узнали о завершении");
+const semi = ms.find((m) => m.round === 2 && m.team_b_id !== finalM.team_a_id && m.winner_id === finalM.team_a_id);
+if (semi) await expectErr("нельзя сменить победителя, если следующий матч сыгран", () => q(`select report_tournament_match($1, 0::smallint, 1::smallint, null)`, [semi.id]), "next_match_played");
+
+// Отмена
+const T2 = await saveT(null, "Отменяемый кубок");
+await as(CAPS[0]);
+await expectErr("чужой турнир не отменить", () => q(`select cancel_tournament($1)`, [T2]), "not_organizer");
+await as(HOST);
+await q(`select cancel_tournament($1)`, [T2]);
+check((await tStatus(T2)) === "cancelled", "организатор отменил турнир");
 
 realLog(failures ? `\n✗ Провалено проверок: ${failures}` : "\n✓ Все проверки базы данных прошли");
 process.exit(failures ? 1 : 0);

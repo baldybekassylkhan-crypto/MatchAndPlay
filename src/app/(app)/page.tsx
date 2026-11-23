@@ -48,10 +48,10 @@ export default async function FeedPage() {
       />
 
       {highlightAuthors.length > 0 && (
-        <nav aria-label="Хайлайты с игр" className="no-scrollbar flex gap-4 overflow-x-auto border-b border-line px-4 py-3">
+        <nav aria-label="Хайлайты с игр" className="no-scrollbar flex gap-4 overflow-x-auto px-4 py-2">
           {highlightAuthors.map((a) => (
             <Link key={a.id} href={`/u/${a.username}?tab=highlights`} className="flex w-16 shrink-0 flex-col items-center gap-1">
-              <span className="rounded-full bg-(image:--story-gradient) p-[2.5px]">
+              <span className="rounded-full bg-accent p-[2px]">
                 <span className="block rounded-full bg-bg p-[2px]">
                   <Avatar src={a.avatar_url} name={a.username} size={56} />
                 </span>

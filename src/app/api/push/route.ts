@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   const r = renderNotification(notification as AppNotification);
   const payload = JSON.stringify({
-    title: `${r.emoji} ${r.title}`,
+    title: r.title,
     body: r.body,
     url: r.href,
     tag: `n-${notification.type}-${(notification as AppNotification).payload.lobby_id ?? (notification as AppNotification).payload.post_id ?? id}`,

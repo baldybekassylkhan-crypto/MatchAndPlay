@@ -15,7 +15,7 @@ export function HeaderSkeleton() {
 /** Скелетон карточки игры — та же высота, что у настоящей, чтобы не прыгала вёрстка. */
 export function LobbyCardSkeleton() {
   return (
-    <div className="space-y-3 rounded-3xl border border-line bg-surface p-4">
+    <div className="space-y-3 card p-4">
       <div className="flex gap-3">
         <Skeleton className="size-12 shrink-0" />
         <div className="flex-1 space-y-2">

@@ -51,6 +51,8 @@ export interface Lobby {
   level: SkillLevel | null;
   price_kzt: number | null;
   status: LobbyStatus;
+  /** Матч между двумя командами: вступают только их игроки */
+  crew_challenge_id?: string | null;
   created_at: string;
   updated_at: string;
 }

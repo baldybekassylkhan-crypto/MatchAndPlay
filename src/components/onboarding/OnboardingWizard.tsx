@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { AtSign, Check, ChevronLeft, Loader2, X } from "lucide-react";
+import { Activity, AtSign, Camera, Check, ChevronLeft, Dumbbell, Loader2, MapPin, PenLine, Sprout, Trophy, UserRound, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveProfile, type ProfileFormState } from "@/app/actions/profile";
@@ -14,12 +14,12 @@ import type { SportId } from "@/lib/sports";
 import { LEVELS, type City, type SkillLevel } from "@/lib/types";
 
 const STEPS = [
-  { id: "username", emoji: "👋", title: "Как тебя называть?", subtitle: "Ник увидят другие игроки. Имя — по желанию." },
-  { id: "avatar", emoji: "📸", title: "Добавь фото", subtitle: "Так организаторам проще принять заявку. Можно позже.", optional: true },
-  { id: "city", emoji: "📍", title: "Где играешь?", subtitle: "Будем показывать игры в твоём городе." },
-  { id: "sports", emoji: "⚽", title: "Во что играешь?", subtitle: "Выбери один или несколько видов спорта." },
-  { id: "level", emoji: "💪", title: "Какой у тебя уровень?", subtitle: "Поможет найти игру по силам." },
-  { id: "bio", emoji: "✍️", title: "Пара слов о себе", subtitle: "Например: «Играю в нападении, ищу команду по выходным».", optional: true },
+  { id: "username", icon: UserRound, title: "Как тебя называть?", subtitle: "Ник увидят другие игроки. Имя — по желанию." },
+  { id: "avatar", icon: Camera, title: "Добавь фото", subtitle: "Так организаторам проще принять заявку. Можно позже.", optional: true },
+  { id: "city", icon: MapPin, title: "Где играешь?", subtitle: "Будем показывать игры в твоём городе." },
+  { id: "sports", icon: Dumbbell, title: "Во что играешь?", subtitle: "Выбери один или несколько видов спорта." },
+  { id: "level", icon: Activity, title: "Какой у тебя уровень?", subtitle: "Поможет найти игру по силам." },
+  { id: "bio", icon: PenLine, title: "Пара слов о себе", subtitle: "Например: «Играю в нападении, ищу команду по выходным».", optional: true },
 ] as const;
 type StepId = (typeof STEPS)[number]["id"];
 
@@ -151,16 +151,10 @@ export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: s
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="pt-8"
           >
-            <motion.p
-              className="text-5xl"
-              initial={{ scale: 0.5, rotate: -15, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.08 }}
-              aria-hidden
-            >
-              {current.emoji}
-            </motion.p>
-            <h1 className="mt-4 text-3xl leading-tight font-extrabold">{current.title}</h1>
+            <span className="flex size-12 items-center justify-center rounded-full bg-accent/12 text-accent" aria-hidden>
+              <current.icon className="size-6" strokeWidth={1.8} />
+            </span>
+            <h1 className="mt-4 text-[28px] leading-tight font-bold tracking-[-0.025em]">{current.title}</h1>
             <p className="mt-2 text-muted">{current.subtitle}</p>
 
             <div className="mt-8">
@@ -171,7 +165,7 @@ export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: s
                       <AtSign className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted" />
                       <input
                         autoFocus
-                        className="input h-14 pr-12 pl-11 text-lg"
+                        className="input pr-12 pl-11"
                         value={username}
                         onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, "").slice(0, 20))}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), next())}
@@ -204,7 +198,7 @@ export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: s
                     </p>
                   </div>
                   <input
-                    className="input h-14 text-lg"
+                    className="input"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value.slice(0, 50))}
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), next())}
@@ -223,7 +217,7 @@ export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: s
               {current.id === "city" && (
                 <div>
                   <CityPicker cities={cities} value={cityId} onChange={setCityId} name="__city" />
-                  <p className="mt-3 text-sm text-muted">Нажми 📍, чтобы определить город автоматически.</p>
+                  <p className="mt-3 text-sm text-muted">Нажми на значок геолокации, чтобы определить город автоматически.</p>
                 </div>
               )}
 
@@ -248,11 +242,11 @@ export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: s
                       transition={{ delay: 0.05 + i * 0.06 }}
                       className={clsx(
                         "flex w-full items-center gap-4 rounded-3xl p-4 text-left transition",
-                        level === l.id ? "bg-ink text-bg" : "glass",
+                        level === l.id ? "bg-accent/12 text-accent" : "bg-surface-2 text-ink",
                       )}
                     >
                       <span className="text-3xl" aria-hidden>
-                        {["🌱", "🔥", "🏆"][i]}
+                        {[<Sprout key="a" className="size-6" />, <Activity key="b" className="size-6" />, <Trophy key="c" className="size-6" />][i]}
                       </span>
                       <span className="flex-1">
                         <span className="block text-lg font-bold">{l.label}</span>
@@ -268,7 +262,7 @@ export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: s
                 <div>
                   <textarea
                     autoFocus
-                    className="input h-36 resize-none py-4 text-lg"
+                    className="input h-32 resize-none py-3"
                     value={bio}
                     onChange={(e) => setBio(e.target.value.slice(0, 160))}
                     placeholder="Играю в футбол по выходным, ищу команду в Алматы"
@@ -300,10 +294,10 @@ export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: s
           type="button"
           onClick={next}
           disabled={!canContinue[current.id] || pending}
-          className="btn-primary h-14 w-full text-lg"
+          className="btn-primary w-full"
         >
           {pending && <Loader2 className="size-5 animate-spin" />}
-          {isLast ? "Готово, поехали! 🚀" : "Дальше"}
+          {isLast ? "Готово" : "Дальше"}
         </button>
         {"optional" in current && current.optional && !isLast && (
           <button type="button" onClick={() => go(step + 1)} className="h-11 w-full text-sm font-semibold text-muted">

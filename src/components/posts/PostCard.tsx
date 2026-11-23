@@ -67,7 +67,7 @@ export function PostCard({ post, full = false }: { post: PostWithMeta; full?: bo
               <p className="truncate text-sm font-semibold">@{post.author.username}</p>
               <p className="truncate text-xs text-muted">
                 {post.recommended ? "Рекомендация" : timeAgo(post.created_at)}
-                {sport && ` · ${sport.emoji} ${sport.label}`}
+                {sport && ` · ${sport.label}`}
               </p>
             </div>
           </Link>

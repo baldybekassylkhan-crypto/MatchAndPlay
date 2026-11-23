@@ -54,7 +54,7 @@ export function OrganizerPanel({
           ) : (
             <ul className="space-y-2">
               {pendingApps.map((app) => (
-                <li key={app.id} className="animate-fade-up rounded-2xl border border-line bg-surface p-3">
+                <li key={app.id} className="animate-fade-up card p-3">
                   <div className="flex items-center gap-3">
                     <Link href={`/u/${app.user?.username}`} className="flex min-w-0 flex-1 items-center gap-3">
                       <Avatar src={app.user?.avatar_url} name={app.user?.username ?? "?"} size={40} />

@@ -226,7 +226,7 @@ export function PostComposer({
           maxLength={1000}
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          placeholder="Как прошла игра? Отметьте лучший момент 🔥"
+          placeholder="Как прошла игра? Отметьте лучший момент"
         />
       </div>
 
@@ -254,7 +254,7 @@ export function PostComposer({
                 }}
                 className={clsx("chip justify-start text-left", lobbyId === g.id && "chip-active")}
               >
-                {SPORTS[g.sport]?.emoji} {SPORTS[g.sport]?.label} · {formatDayTime(g.start_time)}
+                {SPORTS[g.sport]?.label} · {formatDayTime(g.start_time)}
               </button>
             ))}
           </div>

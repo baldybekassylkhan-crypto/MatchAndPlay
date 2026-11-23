@@ -109,7 +109,7 @@ export function ProfileForm({
               aria-pressed={level === l.id}
               className={clsx(
                 "rounded-2xl border p-3 text-left transition",
-                level === l.id ? "border-ink bg-ink text-bg" : "border-line bg-surface",
+                level === l.id ? "border-accent bg-accent/12 text-accent" : "border-line bg-surface",
               )}
             >
               <div className="text-sm font-semibold">{l.label}</div>

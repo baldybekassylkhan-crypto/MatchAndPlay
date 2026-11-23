@@ -29,7 +29,7 @@ export function BlockedList({ users }: { users: BlockedUser[] }) {
   return (
     <section className="mt-8">
       <h2 className="mb-2 font-bold">Заблокированные</h2>
-      <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+      <ul className="divide-y divide-line card">
         {list.map((u) => (
           <li key={u.id} className="flex items-center gap-3 px-4 py-3">
             <Avatar src={u.avatar_url} name={u.username} size={36} />

@@ -19,7 +19,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
         }}
       >
         <div>
-          <p style={{ fontSize: 56, margin: 0 }}>⚠️</p>
+          
           <h1 style={{ fontSize: 22 }}>Match&amp;Play временно недоступен</h1>
           <p style={{ color: "#8f9791" }}>Попробуйте обновить страницу через минуту.</p>
           <button

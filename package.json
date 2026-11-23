@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "vapid": "web-push generate-vapid-keys",
+    "venues": "node scripts/fetch-venues.mjs",
     "test": "vitest run",
     "test:db": "node tests/db/run.mjs"
   },
@@ -22,6 +23,7 @@
     "jsqr": "1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.73.0",
+    "maplibre-gl": "5.24.0",
     "motion": "^14.14.0",
     "next": "15.5.29",
     "qrcode": "1.5.4",

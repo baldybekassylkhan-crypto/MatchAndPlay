@@ -49,7 +49,7 @@ export interface LobbyFilters {
   ai: string;
 }
 
-export type SearchMode = "list" | "swipe";
+export type SearchMode = "map" | "list" | "swipe";
 
 export const EMPTY_FILTERS: LobbyFilters = {
   city: null,
@@ -116,7 +116,9 @@ export function parseFilters(params: RawParams): LobbyFilters {
 }
 
 export function parseMode(params: RawParams): SearchMode {
-  return one(params.mode) === "swipe" ? "swipe" : "list";
+  const mode = one(params.mode);
+  // По умолчанию поиск открывается картой города
+  return mode === "swipe" || mode === "list" ? mode : "map";
 }
 
 /** Фильтры → строка запроса (без пустых значений). */
@@ -134,7 +136,7 @@ export function filtersToQuery(f: LobbyFilters, mode?: SearchMode) {
   if (f.maxp) p.set("maxp", String(f.maxp));
   if (f.free) p.set("free", String(f.free));
   if (f.kw.length) p.set("kw", f.kw.join(","));
-  if (mode === "swipe") p.set("mode", "swipe");
+  if (mode === "swipe" || mode === "list") p.set("mode", mode);
   const s = p.toString();
   return s ? `?${s}` : "";
 }
@@ -217,7 +219,7 @@ export function filterChips(f: LobbyFilters): { key: string; label: string; with
   for (const s of f.sports) {
     chips.push({
       key: `s-${s}`,
-      label: `${SPORTS[s].emoji} ${SPORTS[s].label}`,
+      label: SPORTS[s].label,
       without: { ...f, sports: f.sports.filter((x) => x !== s) },
     });
   }

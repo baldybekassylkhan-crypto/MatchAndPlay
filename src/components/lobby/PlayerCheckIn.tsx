@@ -49,7 +49,7 @@ export function PlayerCheckIn({
   }
 
   return (
-    <section className="space-y-3 rounded-3xl border border-line bg-surface p-4">
+    <section className="space-y-3 card p-4">
       <div>
         <h2 className="font-bold">Вы на месте?</h2>
         <p className="text-sm text-muted">Отсканируйте QR у организатора или введите код с его экрана.</p>

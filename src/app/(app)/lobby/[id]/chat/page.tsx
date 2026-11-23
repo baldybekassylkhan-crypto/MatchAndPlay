@@ -51,7 +51,7 @@ export default async function LobbyChatPage({ params }: { params: Promise<{ id: 
         title={
           <span className="flex flex-col leading-tight">
             <span>
-              {sport?.emoji} Чат · {sport?.label}
+              Чат · {sport?.label}
             </span>
             <span className="text-xs font-normal text-muted">
               {formatShortDayTime(lobby.start_time)} · {Object.keys(members).length} участников

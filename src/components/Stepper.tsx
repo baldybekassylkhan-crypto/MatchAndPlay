@@ -16,7 +16,7 @@ export function Stepper({
   max: number;
 }) {
   return (
-    <div className="flex h-14 items-center justify-between rounded-2xl border border-line bg-surface px-1.5">
+    <div className="flex h-14 items-center justify-between card px-1.5">
       <input type="hidden" name={name} value={value} />
       <button
         type="button"

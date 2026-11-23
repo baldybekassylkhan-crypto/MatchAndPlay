@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, List, Loader2, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { Layers, List, Loader2, Map as MapIcon, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { smartSearch } from "@/app/actions/smart-search";
@@ -132,6 +132,7 @@ export function SearchControls({
             go(filters, m);
           }}
           options={[
+            { value: "map", label: "Карта", icon: <MapIcon className="size-4" /> },
             { value: "list", label: "Список", icon: <List className="size-4" /> },
             { value: "swipe", label: "Свайпы", icon: <Layers className="size-4" /> },
           ]}
@@ -160,8 +161,8 @@ export function SearchControls({
         defaultCityId={cityId}
         onApply={(f) => {
           setSheetOpen(false);
-          // После фильтра — сразу свайп-режим, как в ТЗ
-          go(f, "swipe");
+          // На карте остаёмся на карте, иначе после фильтра — свайп-режим, как в ТЗ
+          go(f, mode === "map" ? "map" : "swipe");
         }}
       />
     </div>

@@ -91,7 +91,7 @@ export function LobbyChat({
     <div className="flex min-h-[calc(100dvh-7.5rem)] flex-col">
       <div className="flex-1 space-y-1 px-4 py-4">
         {messages.length === 0 && (
-          <p className="py-16 text-center text-muted">Пока тихо. Договоритесь о деталях: кто берёт мяч, где встречаемся 👋</p>
+          <p className="py-16 text-center text-muted">Пока тихо. Договоритесь о деталях: кто берёт мяч, где встречаемся</p>
         )}
         {rows.map(({ m, day, grouped }) => {
           const mine = m.user_id === myId;

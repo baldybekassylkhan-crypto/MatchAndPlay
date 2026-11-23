@@ -34,7 +34,7 @@ export async function recordSwipe(lobbyId: string, direction: "left" | "right") 
   return { ok: true };
 }
 
-/** Кнопка ♥ на странице лобби и в сохранённых. */
+/** Кнопка сохранения на странице лобби и в сохранённых. */
 export async function setSaved(lobbyId: string, saved: boolean) {
   if (!isUuid(lobbyId)) return { ok: false };
   const { supabase, userId } = await requireUser();

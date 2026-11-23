@@ -41,8 +41,7 @@ export function Segmented<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={clsx(
-        "glass relative grid rounded-2xl p-1",
-        size === "sm" && "rounded-full",
+        "relative grid rounded-[10px] bg-surface-2 p-0.5",
         className,
       )}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
@@ -57,16 +56,16 @@ export function Segmented<T extends string>({
             aria-selected={active}
             onClick={() => onChange(o.value)}
             className={clsx(
-              "relative flex items-center justify-center gap-1.5 font-semibold transition-colors duration-200",
-              size === "md" ? "h-11 rounded-xl text-sm" : "h-9 rounded-full px-3 text-sm",
-              active ? "text-ink" : "text-muted hover:text-ink",
+              "relative flex items-center justify-center gap-1.5 rounded-[8px] text-[13px] transition-colors duration-200",
+              size === "md" ? "h-8" : "h-8 px-3",
+              active ? "font-semibold text-ink" : "font-medium text-ink",
             )}
           >
             {active && (
               <motion.span
                 layoutId={layoutId}
                 transition={SWITCH_SPRING}
-                className={clsx("absolute inset-0 bg-surface shadow-sm ring-1 ring-black/5", size === "md" ? "rounded-xl" : "rounded-full")}
+                className="absolute inset-0 rounded-[8px] bg-white shadow-[0_2px_6px_rgb(0_0_0/0.12),0_0_0_0.5px_rgb(0_0_0/0.04)] dark:bg-[#636366]"
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5">
@@ -112,14 +111,14 @@ export function TabLinks({
             aria-current={on ? "page" : undefined}
             className={clsx(
               "relative flex shrink-0 items-center justify-center gap-1.5 text-sm font-semibold transition-colors duration-200",
-              variant === "pill" ? "rounded-full px-3.5 py-2" : "h-11 flex-1",
-              variant === "pill" && !on && "glass",
-              on ? (variant === "pill" ? "text-bg" : "text-ink") : "text-muted hover:text-ink",
+              variant === "pill" ? "rounded-full px-3.5 py-1.5" : "h-11 flex-1",
+              variant === "pill" && !on && "bg-surface-2 text-ink",
+              on ? (variant === "pill" ? "text-accent-ink" : "text-ink") : "text-muted",
             )}
           >
             {on &&
               (variant === "pill" ? (
-                <motion.span layoutId={layoutId} transition={SWITCH_SPRING} className="absolute inset-0 rounded-full bg-ink" />
+                <motion.span layoutId={layoutId} transition={SWITCH_SPRING} className="absolute inset-0 rounded-full bg-accent" />
               ) : (
                 <motion.span
                   layoutId={layoutId}

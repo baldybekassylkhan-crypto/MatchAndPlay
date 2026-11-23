@@ -121,7 +121,7 @@ export function PushToggle() {
   }
 
   return (
-    <div className="mx-4 mt-4 rounded-2xl border border-line bg-surface p-4">
+    <div className="mx-4 mt-4 card p-4">
       <div className="flex items-center gap-3">
         <BellRing className="size-6 shrink-0" />
         <div className="flex-1">
