@@ -35,7 +35,7 @@ create function net.http_post(url text, body jsonb, headers jsonb, timeout_milli
 `;
 await db.exec(stubs);
 
-for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "seed.sql"]) {
+for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "seed.sql"]) {
   let sql = readFileSync(path.join(dir, f), "utf8");
   sql = sql
     .replace(/create extension if not exists pg_cron[^;]*;/, "")
@@ -297,6 +297,120 @@ await as(null);
 await q(`insert into notifications(user_id, type) values ($1, 'follow')`, [OTHER]);
 const call = (await q(`select * from net.calls`))[0];
 console.log(call?.url === "https://app.example/api/push" && call?.headers["x-push-secret"] === "s3cret" && call?.body.id ? "OK  " : "FAIL", "push: новое уведомление → POST на /api/push с секретом");
+
+// Этап 8: безопасность и правила игры
+const check = (ok, label, extra) => console.log(ok ? "OK  " : "FAIL", label, extra ?? "");
+const newLobby = async (needed = 2, start = "5 hours") => {
+  await as(null);
+  const [{ id }] = await q(`insert into lobbies(organizer_id, sport, description, players_current, players_needed, start_time, city_id, location_name)
+    values ('${ORG}', 'football', 'Этап 8', 2, ${needed}, now() + interval '${start}', 1, 'Поле') returning id`);
+  return id;
+};
+const join = async (lobby, uid) => {
+  await as(uid);
+  const [{ apply_to_lobby: app }] = await q(`select apply_to_lobby($1, null)`, [lobby]);
+  await as(ORG);
+  await q(`select decide_application($1, true)`, [app]);
+  return app;
+};
+const lobbyRow = async (id) => (await q(`select accepted_count, status from lobbies where id = $1`, [id]))[0];
+const appStatus = async (id) => (await q(`select status from lobby_applications where id = $1`, [id]))[0].status;
+
+// Удаление игрока
+const L20 = await newLobby(1);
+const A20 = await join(L20, ME);
+await as(OTHER);
+await expectErr("чужой не может убрать игрока", () => q(`select remove_player($1)`, [A20]), "not_organizer");
+await as(ORG);
+await q(`select remove_player($1)`, [A20]);
+let row = await lobbyRow(L20);
+check(row.accepted_count === 0 && row.status === "active", "организатор убрал игрока, место освободилось", row);
+check((await notes(ME, "player_removed")).length === 1, "убранный игрок получил уведомление");
+await as(ME);
+await expectErr("убранный игрок не может подать заявку снова", () => q(`select apply_to_lobby($1, null)`, [L20]), "was_rejected");
+check(!(await mem(L20, ME)), "убранный игрок потерял доступ к чату");
+
+// Блокировка
+const L21 = await newLobby(2);
+const A21 = await join(L21, ME);
+await as(null);
+await q(`insert into follows(follower_id, following_id) values ($1, $2), ($2, $1) on conflict do nothing`, [ME, ORG]);
+await q(`delete from notifications where user_id = $1`, [ME]);
+const [{ id: P21 }] = await q(`insert into posts(author_id, media) values ($1, '[{"type":"image","path":"x/y.webp","w":1,"h":1}]') returning id`, [ME]);
+await as(ORG);
+await q(`select block_user($1)`, [ME]);
+row = await lobbyRow(L21);
+check(row.accepted_count === 0 && (await appStatus(A21)) === "rejected", "блокировка убрала игрока из будущей игры организатора", row);
+check((await q(`select count(*)::int n from notifications where user_id = $1`, [ME]))[0].n === 0, "блокировка не отправляет уведомление");
+check((await q(`select count(*)::int n from follows where (follower_id = $1 and following_id = $2) or (follower_id = $2 and following_id = $1)`, [ME, ORG]))[0].n === 0, "блокировка убрала подписки в обе стороны");
+const L22 = await newLobby(2);
+await as(ME);
+await expectErr("заблокированный не может подать заявку", () => q(`select apply_to_lobby($1, null)`, [L22]), "user_blocked");
+await expectErr("заблокированный не может подписаться", () => q(`insert into follows(follower_id, following_id) values ($1, $2)`, [ME, ORG]), "user_blocked");
+await as(ORG);
+await expectErr("нельзя лайкнуть пост заблокированного", () => q(`insert into likes(post_id, user_id) values ($1, $2)`, [P21, ORG]), "user_blocked");
+await expectErr("нельзя прокомментировать пост заблокированного", () => q(`insert into comments(post_id, user_id, text) values ($1, $2, 'x')`, [P21, ORG]), "user_blocked");
+await expectErr("нельзя заблокировать себя", () => q(`select block_user($1)`, [ORG]), "cannot_block_self");
+await q(`delete from blocks where blocker_id = $1 and blocked_id = $2`, [ORG, ME]);
+check(!(await q(`select is_blocked_between($1, $2) as b`, [ORG, ME]))[0].b, "блокировку можно снять");
+
+// Сообщения в чате
+const L23 = await newLobby(2);
+await join(L23, ME);
+await as(null);
+await q(`delete from notifications where type = 'chat_message'`);
+await as(ME);
+await q(`insert into lobby_messages(lobby_id, user_id, text) values ($1, $2, 'Первое')`, [L23, ME]);
+await q(`insert into lobby_messages(lobby_id, user_id, text) values ($1, $2, 'Второе')`, [L23, ME]);
+check((await notes(ORG, "chat_message")).length === 1, "чат: одно уведомление на серию сообщений");
+check((await notes(ME, "chat_message")).length === 0, "чат: автору уведомление не приходит");
+await as(null);
+await q(`update notifications set read = true where user_id = $1 and type = 'chat_message'`, [ORG]);
+await as(ME);
+await q(`insert into lobby_messages(lobby_id, user_id, text) values ($1, $2, 'Третье')`, [L23, ME]);
+check((await notes(ORG, "chat_message")).length === 2, "чат: после прочтения новое сообщение снова уведомляет");
+
+// Перенос игры
+const L24 = await newLobby(2, "90 minutes");
+await join(L24, ME);
+await as(null);
+await q(`delete from notifications where type = 'reminder_2h'`);
+await q(`select send_game_reminders()`);
+check((await notes(ME, "reminder_2h")).length === 1, "перенос: первое напоминание отправлено");
+await q(`update lobbies set start_time = now() + interval '100 minutes' where id = $1`, [L24]);
+await q(`select send_game_reminders()`);
+check((await notes(ME, "reminder_2h")).length === 2, "перенос: напоминание приходит заново");
+await as(ORG);
+await expectErr("игру с игроками нельзя перенести на время меньше чем за 30 минут", () =>
+  q(`update lobbies set start_time = now() + interval '20 minutes' where id = $1`, [L24]), "too_soon_with_players");
+await q(`update lobbies set start_time = now() + interval '45 minutes' where id = $1`, [L24]);
+check(true, "перенос за 45 минут до начала разрешён");
+
+// Счётчик игр организатора
+const L25 = await newLobby(2);
+await as(null);
+await q(`update lobbies set start_time = now() - interval '3 hours' where id = $1`, [L25]);
+const orgBefore = (await q(`select games_played from profiles where id = $1`, [ORG]))[0].games_played;
+await q(`update lobbies set status = 'cancelled' where status in ('active', 'full') and id <> $1 and organizer_id = $2`, [L25, ORG]);
+await q(`select finish_past_lobbies()`);
+check((await q(`select games_played from profiles where id = $1`, [ORG]))[0].games_played === orgBefore, "игра без принятых игроков не даёт +1 организатору");
+
+// Жалобы
+await as(ME);
+await q(`insert into reports(reporter_id, target_user_id, reason) values ($1, $2, 'spam')`, [ME, OTHER]);
+await expectErr("повторная открытая жалоба отклоняется", () => q(`insert into reports(reporter_id, target_user_id, reason) values ($1, $2, 'spam')`, [ME, OTHER]), "reports_one_open_idx");
+await expectErr("нельзя пожаловаться на себя", () => q(`insert into reports(reporter_id, target_user_id, reason) values ($1, $1, 'spam')`, [ME]), "reports_not_self");
+
+// Подготовка к удалению аккаунта
+const L26 = await newLobby(1);
+const A26 = await join(L26, OTHER);
+await as(OTHER);
+const [{ id: L27 }] = await q(`insert into lobbies(organizer_id, sport, description, players_current, players_needed, start_time, city_id, location_name)
+  values ($1, 'football', 'Моя игра', 2, 2, now() + interval '6 hours', 1, 'Поле') returning id`, [OTHER]);
+await q(`select prepare_account_deletion()`);
+row = await lobbyRow(L26);
+check(row.accepted_count === 0 && row.status === "active" && (await appStatus(A26)) === "cancelled", "удаление аккаунта освобождает место в чужой игре", row);
+check((await lobbyRow(L27)).status === "cancelled", "удаление аккаунта отменяет свои будущие игры");
 
 realLog(failures ? `\n✗ Провалено проверок: ${failures}` : "\n✓ Все проверки базы данных прошли");
 process.exit(failures ? 1 : 0);

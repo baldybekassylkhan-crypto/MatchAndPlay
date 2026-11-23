@@ -54,6 +54,10 @@ export function renderNotification(n: Pick<AppNotification, "type" | "payload">)
       return { emoji: "🙅", title: "Заявка отклонена", body: `Организатор не принял заявку на ${game}, ${when}. Поищите другую игру!`, href: "/search" };
     case "player_left":
       return { emoji: "🚪", title: "Игрок отказался", body: `${actor} не сможет прийти на ${game}, ${when}. Место снова свободно.`, href: lobbyHref };
+    case "player_removed":
+      return { emoji: "🚫", title: "Вас убрали из игры", body: `Организатор убрал вас из игры: ${game}, ${when}. Поищите другую игру!`, href: "/search" };
+    case "chat_message":
+      return { emoji: "💬", title: `Чат: ${sport?.label ?? "игра"}, ${when}`, body: `${actor}: ${p.text ?? ""}`, href: p.lobby_id ? `/lobby/${p.lobby_id}/chat` : "/games" };
     case "lobby_cancelled":
       return { emoji: "❌", title: "Игра отменена", body: `Организатор отменил ${game}, ${when}`, href: lobbyHref };
     case "lobby_updated": {

@@ -5,10 +5,12 @@ import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/components/FollowButton";
 import { PageHeader } from "@/components/PageHeader";
 import { ProfilePostsTabs } from "@/components/posts/ProfilePostsTabs";
+import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { getUser } from "@/lib/auth";
 import { getProfilePosts } from "@/lib/posts";
 import { getFollowCounts, getProfileByUsername, isFollowing } from "@/lib/profiles";
 import { SPORTS } from "@/lib/sports";
+import { createClient } from "@/lib/supabase/server";
 import { LEVELS } from "@/lib/types";
 
 type Params = Promise<{ username: string }>;
@@ -32,12 +34,17 @@ export default async function ProfilePage({
 
   const isMe = me?.id === profile.id;
   const activeTab = tab === "highlights" ? "highlights" : "posts";
-  const [counts, following, posts] = await Promise.all([
+  const supabase = await createClient();
+  const [counts, following, posts, blockRow] = await Promise.all([
     getFollowCounts(profile.id),
     me && !isMe ? isFollowing(me.id, profile.id) : Promise.resolve(false),
     // Все посты сразу: вкладка «Хайлайты» фильтрует их на устройстве, без запроса
     getProfilePosts(profile.id),
+    me && !isMe
+      ? supabase.from("blocks").select("blocked_id").eq("blocker_id", me.id).eq("blocked_id", profile.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+  const blocked = Boolean(blockRow.data);
   const level = LEVELS.find((l) => l.id === profile.level);
 
   return (
@@ -45,10 +52,12 @@ export default async function ProfilePage({
       <PageHeader
         title={`@${profile.username}`}
         right={
-          isMe && (
+          isMe ? (
             <Link href="/profile/edit" className="flex size-10 items-center justify-center" aria-label="Настройки">
               <Settings className="size-5" />
             </Link>
+          ) : (
+            <UserSafetyMenu key={String(blocked)} targetId={profile.id} username={profile.username} initialBlocked={blocked} />
           )
         }
       />
@@ -88,6 +97,8 @@ export default async function ProfilePage({
             <Link href="/profile/edit" className="btn-secondary h-10 flex-1 text-sm">
               Редактировать профиль
             </Link>
+          ) : blocked ? (
+            <p className="w-full rounded-xl bg-surface-2 px-4 py-2.5 text-center text-sm text-muted">Вы заблокировали этого игрока</p>
           ) : (
             <FollowButton targetId={profile.id} initialFollowing={following} />
           )}

@@ -3,10 +3,11 @@
 import { BellOff, BellRing, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { removePushSubscription, savePushSubscription } from "@/app/actions/notifications";
+import { isNativeApp } from "@/lib/native";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
-type State = "loading" | "unsupported" | "ios-install" | "no-sw" | "denied" | "off" | "on";
+type State = "loading" | "native" | "unsupported" | "ios-install" | "no-sw" | "denied" | "off" | "on";
 
 function urlBase64ToUint8Array(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -27,7 +28,11 @@ export function PushToggle() {
 
   useEffect(() => {
     (async () => {
-      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isNativeApp()) {
+        setState("native");
+        return;
+      }
+      const isIos =/iphone|ipad|ipod/i.test(navigator.userAgent);
       const standalone = window.matchMedia("(display-mode: standalone)").matches;
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
         setState(isIos && !standalone ? "ios-install" : "unsupported");
@@ -99,6 +104,7 @@ export function PushToggle() {
   if (state === "loading") return null;
 
   const hint: Partial<Record<State, string>> = {
+    native: "В этой версии приложения push-уведомления недоступны. Новые уведомления появляются здесь, когда приложение открыто.",
     unsupported: "Этот браузер не поддерживает push-уведомления. Уведомления будут видны здесь, в приложении.",
     "ios-install": "На iPhone push работают, если добавить Match&Play на экран «Домой»: «Поделиться» → «На экран „Домой“».",
     "no-sw": "Push-уведомления работают в установленной (production) версии приложения.",

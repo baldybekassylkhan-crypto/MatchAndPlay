@@ -4,7 +4,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/env";
 import { getAuthUserId } from "@/lib/supabase/auth-user";
 
 // /api/push вызывает база данных — он защищён собственным секретом, а не сессией.
-const PUBLIC_PATHS = ["/login", "/auth", "/offline", "/api/push"];
+const PUBLIC_PATHS = ["/login", "/auth", "/offline", "/api/push", "/g", "/privacy"];
 
 function isPublic(path: string) {
   return PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));

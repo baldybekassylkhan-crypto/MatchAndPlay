@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthUserId } from "@/lib/supabase/auth-user";
 import { createClient } from "@/lib/supabase/server";
-import { fieldErrors, profileSchema } from "@/lib/validation";
+import { fieldErrors, profileSchema, safeNext } from "@/lib/validation";
 
 export interface ProfileFormState {
   error: string | null;
@@ -43,7 +43,7 @@ export async function saveProfile(_prev: ProfileFormState, formData: FormData): 
   }
 
   revalidatePath("/", "layout");
-  redirect(text(formData.get("mode")) === "onboarding" ? "/" : `/u/${parsed.data.username}`);
+  redirect(text(formData.get("mode")) === "onboarding" ? safeNext(text(formData.get("next"))) : `/u/${parsed.data.username}`);
 }
 
 export async function toggleFollow(targetId: string, follow: boolean) {

@@ -178,6 +178,19 @@ npm run typecheck && npm run lint && npm run build
 - Lighthouse (мобильный режим, production-сборка): Performance 96–98, Accessibility 100, Best Practices 100, SEO 100 на страницах входа и офлайна
 - Юнит-тесты, тесты базы данных и CI на GitHub Actions
 
+## Что готово (этап 8) — ссылки, безопасность, iOS
+
+Перед запуском выполните в Supabase SQL Editor файл `supabase/migrations/0008_safety_and_flow.sql`. Для удаления аккаунта на Vercel должен быть задан `SUPABASE_SERVICE_ROLE_KEY`. Жалобы лежат в Supabase → Table Editor → `reports`.
+
+### Установка на iPhone по кабелю (с Windows)
+
+1. GitHub → **Actions → iOS app → Run workflow**, укажите адрес сайта на Vercel. Когда сборка закончится, скачайте `MatchAndPlay-ipa` и распакуйте `MatchAndPlay.ipa`.
+2. Установите [Sideloadly](https://sideloadly.io) и подключите iPhone кабелем. На телефоне нажмите «Доверять этому компьютеру».
+3. Перетащите IPA в Sideloadly, введите свой Apple ID и нажмите **Start**.
+4. На iPhone: **Настройки → Основные → VPN и управление устройством** → доверьте своему Apple ID. Также включите **Настройки → Конфиденциальность и безопасность → Режим разработчика**.
+
+С бесплатным Apple ID приложение работает 7 дней, затем повторите шаг 3. Приложение загружает сайт, поэтому обновления сайта появляются в нём без переустановки. Вход через Google и push в этой версии недоступны.
+
 ## Структура
 
 ```

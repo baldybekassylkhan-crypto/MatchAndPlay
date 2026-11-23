@@ -34,6 +34,15 @@ export default async function LobbyChatPage({ params }: { params: Promise<{ id: 
     .limit(200);
   const messages = ((data as ChatMessage[] | null) ?? []).reverse();
 
+  // Чат открыт — уведомления о его сообщениях прочитаны, и следующие снова смогут прийти
+  await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("user_id", user.id)
+    .eq("type", "chat_message")
+    .eq("read", false)
+    .eq("payload->>lobby_id", lobby.id);
+
   const sport = SPORTS[lobby.sport];
 
   return (

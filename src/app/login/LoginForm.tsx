@@ -3,9 +3,11 @@
 import { Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Reveal } from "@/components/ui/Reveal";
 import { Segmented } from "@/components/ui/Segmented";
+import { isNativeApp } from "@/lib/native";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
@@ -25,7 +27,13 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
   const [error, setError] = useState<string | null>(initialError);
   const [info, setInfo] = useState<string | null>(null);
 
-  const callbackUrl = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  // Google запрещает вход во встроенном окне приложения, поэтому в iOS-версии остаётся вход по email
+  const [native, setNative] = useState(false);
+  useEffect(() => setNative(isNativeApp()), []);
+
+  // Новый пользователь сначала заполнит профиль, затем вернётся на страницу, с которой пришёл
+  const afterAuth = next === "/" ? "/" : `/onboarding?next=${encodeURIComponent(next)}`;
+  const callbackUrl = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(afterAuth)}`;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +49,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
         setBusy(null);
         return;
       }
-      router.replace(next);
+      router.replace(afterAuth);
       router.refresh();
       return;
     }
@@ -57,7 +65,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
       return;
     }
     if (data.session) {
-      router.replace("/onboarding");
+      router.replace(next === "/" ? "/onboarding" : afterAuth);
       router.refresh();
     } else {
       setInfo(`Мы отправили письмо на ${email}. Перейдите по ссылке, чтобы подтвердить аккаунт.`);
@@ -138,16 +146,27 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
         </button>
       </form>
 
-      <div className="flex items-center gap-3 text-xs text-muted">
-        <div className="h-px flex-1 bg-line" />
-        или
-        <div className="h-px flex-1 bg-line" />
-      </div>
+      {!native && (
+        <>
+          <div className="flex items-center gap-3 text-xs text-muted">
+            <div className="h-px flex-1 bg-line" />
+            или
+            <div className="h-px flex-1 bg-line" />
+          </div>
 
-      <button type="button" onClick={onGoogle} className="btn-secondary w-full" disabled={busy !== null}>
-        {busy === "google" ? <Loader2 className="size-4 animate-spin" /> : <GoogleMark />}
-        Продолжить с Google
-      </button>
+          <button type="button" onClick={onGoogle} className="btn-secondary w-full" disabled={busy !== null}>
+            {busy === "google" ? <Loader2 className="size-4 animate-spin" /> : <GoogleMark />}
+            Продолжить с Google
+          </button>
+        </>
+      )}
+
+      <p className="text-center text-xs text-muted">
+        Продолжая, вы принимаете{" "}
+        <Link href="/privacy" className="underline">
+          политику конфиденциальности
+        </Link>
+      </p>
     </div>
   );
 }

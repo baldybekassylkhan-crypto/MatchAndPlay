@@ -65,6 +65,7 @@ export function fieldErrors(error: z.ZodError): Record<string, string> {
 
 /** Разрешаем редирект только на внутренние пути. */
 export function safeNext(next: string | null | undefined, fallback = "/") {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return fallback;
+  // Браузер считает «/\example.com» адресом другого сайта, как и «//example.com»
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
   return next;
 }

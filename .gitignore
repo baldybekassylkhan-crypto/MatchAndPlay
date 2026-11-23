@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# iOS-проект создаётся заново при каждой сборке (.github/workflows/ios.yml)
+/ios
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

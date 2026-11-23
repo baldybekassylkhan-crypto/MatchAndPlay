@@ -35,6 +35,8 @@ const DB_ERRORS: Record<string, string> = {
   lobby_locked: "Эту игру уже нельзя изменить",
   start_in_past: "Время начала уже прошло",
   needed_below_accepted: "Нельзя искать меньше игроков, чем уже принято",
+  too_soon_with_players: "В игре уже есть игроки: нельзя перенести её на время меньше чем за 30 минут до начала",
+  user_blocked: "Подать заявку в эту игру нельзя",
 };
 
 function dbError(message: string | undefined) {
@@ -128,6 +130,10 @@ export async function decideApplication(applicationId: string, accept: boolean, 
 
 export async function cancelApplication(applicationId: string, lobbyId: string) {
   return rpc("cancel_application", { p_application_id: applicationId }, lobbyId);
+}
+
+export async function removePlayer(applicationId: string, lobbyId: string) {
+  return rpc("remove_player", { p_application_id: applicationId }, lobbyId);
 }
 
 export async function cancelLobby(lobbyId: string) {

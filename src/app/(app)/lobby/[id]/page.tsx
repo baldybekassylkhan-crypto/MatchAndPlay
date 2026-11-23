@@ -5,6 +5,8 @@ import { Avatar } from "@/components/Avatar";
 import { MapView } from "@/components/map/Map";
 import { OrganizerPanel } from "@/components/lobby/OrganizerPanel";
 import { PlayerActions } from "@/components/lobby/PlayerActions";
+import { RemovePlayerButton } from "@/components/lobby/RemovePlayerButton";
+import { ShareGameButton } from "@/components/lobby/ShareGameButton";
 import { SlotsBar } from "@/components/lobby/SlotsBar";
 import { PageHeader } from "@/components/PageHeader";
 import { getUser } from "@/lib/auth";
@@ -98,6 +100,13 @@ export default async function LobbyPage({
 
         <SlotsBar lobby={lobby} />
 
+        {open && (
+          <ShareGameButton
+            lobbyId={lobby.id}
+            text={`${sport?.emoji ?? ""} ${sport?.label ?? "Игра"}, ${formatLongDate(lobby.start_time)} в ${formatTime(lobby.start_time)}, ${lobby.location_name}. Присоединяйся!`.trim()}
+          />
+        )}
+
         {(isOrganizer || myApp?.status === "accepted") && (
           <Link href={`/lobby/${lobby.id}/chat`} className="btn-secondary w-full">
             <MessagesSquare className="size-5" /> Чат игры
@@ -129,7 +138,18 @@ export default async function LobbyPage({
               />
             )}
             {accepted.map((a) =>
-              a.user ? <PersonRow key={a.id} username={a.user.username} avatar={a.user.avatar_url} /> : null,
+              a.user ? (
+                <PersonRow
+                  key={a.id}
+                  username={a.user.username}
+                  avatar={a.user.avatar_url}
+                  action={
+                    isOrganizer && open ? (
+                      <RemovePlayerButton applicationId={a.id} lobbyId={lobby.id} username={a.user.username} />
+                    ) : undefined
+                  }
+                />
+              ) : null,
             )}
           </ul>
         </section>
@@ -147,14 +167,25 @@ function Info({ icon: Icon, children }: { icon: typeof Clock; children: React.Re
   );
 }
 
-function PersonRow({ username, avatar, note }: { username: string; avatar: string | null; note?: string }) {
+function PersonRow({
+  username,
+  avatar,
+  note,
+  action,
+}: {
+  username: string;
+  avatar: string | null;
+  note?: string;
+  action?: React.ReactNode;
+}) {
   return (
-    <li>
-      <Link href={`/u/${username}`} className="flex items-center gap-3 px-4 py-3">
+    <li className="flex items-center">
+      <Link href={`/u/${username}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
         <Avatar src={avatar} name={username} size={36} />
         <span className="flex-1 truncate font-medium">@{username}</span>
         {note && <span className="text-sm text-muted">{note}</span>}
       </Link>
+      {action}
     </li>
   );
 }

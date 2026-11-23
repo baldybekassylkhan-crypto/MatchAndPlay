@@ -31,7 +31,7 @@ const slide = {
 };
 
 /** Знакомство по шагам, как сторис: полоски прогресса сверху, по одному вопросу на экран. */
-export function OnboardingWizard({ userId, cities }: { userId: string; cities: City[] }) {
+export function OnboardingWizard({ userId, cities, nextPath = "/" }: { userId: string; cities: City[]; nextPath?: string }) {
   const [state, formAction, pending] = useActionState(saveProfile, initialState);
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -94,6 +94,7 @@ export function OnboardingWizard({ userId, cities }: { userId: string; cities: C
     >
       {/* Все ответы уходят одной отправкой на последнем шаге */}
       <input type="hidden" name="mode" value="onboarding" />
+      <input type="hidden" name="next" value={nextPath} />
       <input type="hidden" name="username" value={username} />
       <input type="hidden" name="full_name" value={fullName} />
       <input type="hidden" name="avatar_url" value={avatarUrl ?? ""} />

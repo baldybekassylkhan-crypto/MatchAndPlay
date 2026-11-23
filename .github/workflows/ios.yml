@@ -1,0 +1,87 @@
+name: iOS app
+
+# Запускается вручную: GitHub → Actions → iOS app → Run workflow.
+# Собирает неподписанный MatchAndPlay.ipa. Подпись и установка выполняются на компьютере через Sideloadly.
+on:
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Адрес сайта на Vercel, например https://match-play.vercel.app"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CAP_SERVER_URL: ${{ inputs.app_url }}
+    steps:
+      - name: Проверка адреса
+        run: |
+          if ! [[ "$CAP_SERVER_URL" =~ ^https://[A-Za-z0-9.-]+/?$ ]]; then
+            echo "::error::Нужен адрес вида https://ваш-сайт.vercel.app"
+            exit 1
+          fi
+          echo "CAP_SERVER_URL=${CAP_SERVER_URL%/}" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Создание проекта iOS
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Название и разрешения
+        run: |
+          PLIST=ios/App/App/Info.plist
+          set_key() {
+            /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$PLIST"
+          }
+          set_key CFBundleDisplayName "Match&Play"
+          set_key NSLocationWhenInUseUsageDescription "Чтобы определить ваш город и показать расстояние до игры."
+          set_key NSPhotoLibraryUsageDescription "Чтобы добавить фото профиля и посты."
+          set_key NSCameraUsageDescription "Чтобы снять фото или видео для профиля и постов."
+          set_key NSMicrophoneUsageDescription "Чтобы записать звук в видео для поста."
+
+      - name: Значок приложения
+        run: |
+          ICON_DIR=ios/App/App/Assets.xcassets/AppIcon.appiconset
+          ICON=$(find "$ICON_DIR" -name '*.png' | head -1)
+          curl --fail --silent --show-error --location "$CAP_SERVER_URL/icons/ios" -o /tmp/icon.png
+          # В значке iOS не должно быть прозрачности
+          sips -s format jpeg /tmp/icon.png --out /tmp/icon.jpg
+          sips -s format png -z 1024 1024 /tmp/icon.jpg --out "$ICON"
+
+      - name: Сборка
+        working-directory: ios/App
+        run: |
+          if [ -d App.xcworkspace ]; then TARGET=(-workspace App.xcworkspace); else TARGET=(-project App.xcodeproj); fi
+          xcodebuild "${TARGET[@]}" -scheme App -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      - name: Упаковка в IPA
+        run: |
+          APP=$(find ios/App/build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          mkdir -p out/Payload
+          cp -R "$APP" out/Payload/
+          (cd out && zip -qry MatchAndPlay.ipa Payload)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MatchAndPlay-ipa
+          path: out/MatchAndPlay.ipa
+          if-no-files-found: error
+          retention-days: 14
