@@ -5,6 +5,7 @@ import { Loader2, MapPin, ShieldCheck, X } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 import { saveTournament, type TournamentFormState } from "@/app/actions/tournaments";
 import { MapView, type LatLng } from "@/components/map/Map";
+import { DateTimeInput } from "@/components/ui/DateTimeInput";
 import { SPORT_IDS, SPORTS, type SportId } from "@/lib/sports";
 import { toKzInputs } from "@/lib/time";
 import type { Tournament } from "@/lib/tournaments";
@@ -119,16 +120,16 @@ export function TournamentForm({
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Дата начала" error={f.starts_at}>
-          <input type="date" name="start_date" className="input" required defaultValue={dates.start.date} />
+          <DateTimeInput type="date" name="start_date" required defaultValue={dates.start.date} />
         </Field>
         <Field label="Время начала">
-          <input type="time" name="start_time" className="input" required defaultValue={dates.start.time} />
+          <DateTimeInput type="time" name="start_time" required defaultValue={dates.start.time} />
         </Field>
         <Field label="Регистрация до" error={f.registration_ends_at}>
-          <input type="date" name="reg_date" className="input" required defaultValue={dates.reg.date} />
+          <DateTimeInput type="date" name="reg_date" required defaultValue={dates.reg.date} />
         </Field>
         <Field label="Время">
-          <input type="time" name="reg_time" className="input" required defaultValue={dates.reg.time} />
+          <DateTimeInput type="time" name="reg_time" required defaultValue={dates.reg.time} />
         </Field>
       </div>
 

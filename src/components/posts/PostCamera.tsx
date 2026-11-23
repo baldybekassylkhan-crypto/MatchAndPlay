@@ -5,9 +5,11 @@ import { Camera, ChevronUp, Images, Loader2, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
 
-/** На сколько пикселей нужно потянуть вверх, чтобы открылась галерея. */
+/** На сколько пикселей нужно потянуть вверх, чтобы шторка галереи осталась открытой. */
 const SWIPE_DISTANCE = 72;
-const MAX_PULL = 200;
+const SHEET_HEIGHT = 240;
+/** Открытую шторку закрывает движение вниз примерно на треть. */
+const SHEET_KEEP_OPEN = 165;
 
 type Facing = "environment" | "user";
 type Status = "loading" | "ready" | "blocked";
@@ -35,6 +37,7 @@ export function PostCamera({
   const [flash, setFlash] = useState(0);
   const [pull, setPull] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const dragStart = useRef<number | null>(null);
   const pullRef = useRef(0);
 
@@ -73,11 +76,21 @@ export function PostCamera({
       }
     };
     const onVisibility = () => (document.hidden ? stop() : start());
+    // После окна выбора фото iOS может остановить видео
+    const onReturn = () => {
+      if (document.hidden) return;
+      if (stream?.getVideoTracks()[0]?.readyState === "ended") start();
+      else videoRef.current?.play().catch(() => {});
+    };
 
     start();
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onReturn);
+    window.addEventListener("pageshow", onReturn);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onReturn);
+      window.removeEventListener("pageshow", onReturn);
       stop();
     };
   }, [facing]);
@@ -116,23 +129,26 @@ export function PostCamera({
   const onTouchStart = (e: TouchEvent) => {
     if ((e.target as HTMLElement).closest("button") || busy) return;
     dragStart.current = e.touches[0].clientY;
+    pullRef.current = sheetOpen ? SHEET_HEIGHT : 0;
+    setPull(pullRef.current);
     setDragging(true);
   };
   const onTouchMove = (e: TouchEvent) => {
     if (dragStart.current === null) return;
-    pullRef.current = Math.min(MAX_PULL, Math.max(0, dragStart.current - e.touches[0].clientY));
+    const moved = dragStart.current - e.touches[0].clientY;
+    pullRef.current = Math.min(SHEET_HEIGHT, Math.max(0, (sheetOpen ? SHEET_HEIGHT : 0) + moved));
     setPull(pullRef.current);
   };
   const onTouchEnd = () => {
     if (dragStart.current === null) return;
-    const open = pullRef.current >= SWIPE_DISTANCE;
+    // iOS открывает выбор файла только по нажатию, поэтому свайп поднимает шторку с кнопкой
+    setSheetOpen(pullRef.current >= (sheetOpen ? SHEET_KEEP_OPEN : SWIPE_DISTANCE));
     dragStart.current = null;
     pullRef.current = 0;
     setDragging(false);
     setPull(0);
-    // Выбор файла iOS разрешает только прямо внутри жеста
-    if (open) onGallery();
   };
+  const sheetVisible = dragging ? pull : sheetOpen ? SHEET_HEIGHT : 0;
 
   if (!mounted) return <div className="fixed inset-0 z-[80] bg-black" />;
 
@@ -192,7 +208,7 @@ export function PostCamera({
 
       <div
         className={clsx("absolute inset-x-0 bottom-0 pb-[calc(0.75rem+env(safe-area-inset-bottom))]", !dragging && "transition-transform duration-300 ease-out-soft")}
-        style={{ transform: `translateY(${-pull * 0.35}px)`, opacity: 1 - pull / (MAX_PULL * 1.4) }}
+        style={{ transform: `translateY(${-sheetVisible * 0.35}px)`, opacity: 1 - sheetVisible / (SHEET_HEIGHT * 1.4) }}
       >
         <div className="grid grid-cols-3 items-center px-8">
           <button type="button" onClick={onGallery} aria-label="Выбрать фото или видео" className="camera-button justify-self-start">
@@ -222,16 +238,33 @@ export function PostCamera({
         </span>
       </div>
 
+      {sheetOpen && !dragging && (
+        <button type="button" aria-label="Закрыть выбор фото" className="absolute inset-0" onClick={() => setSheetOpen(false)} />
+      )}
+
       <div
-        aria-hidden
+        aria-hidden={sheetVisible === 0}
         className={clsx(
-          "absolute inset-x-0 bottom-0 flex h-[220px] flex-col items-center gap-2 rounded-t-3xl bg-[#1c1c1e] pt-6",
+          "absolute inset-x-0 bottom-0 flex flex-col items-center rounded-t-3xl bg-[#1c1c1e] px-5 pt-2.5 pb-[env(safe-area-inset-bottom)]",
           !dragging && "transition-transform duration-300 ease-out-soft",
         )}
-        style={{ transform: `translateY(${220 - pull}px)` }}
+        style={{ height: SHEET_HEIGHT, transform: `translateY(${SHEET_HEIGHT - sheetVisible}px)` }}
       >
-        <Images className="size-7" />
-        <span className="text-[15px] font-semibold">{pull >= SWIPE_DISTANCE ? "Отпустите, чтобы открыть фото" : "Тяните вверх"}</span>
+        <span className="h-1 w-9 rounded-full bg-white/30" aria-hidden />
+        <Images className="mt-5 size-7" aria-hidden />
+        <p className="mt-2 text-[17px] font-semibold">Фото с телефона</p>
+        <p className="mt-0.5 text-[13px] text-white/60">До 10 фото или одно видео</p>
+        <button
+          type="button"
+          tabIndex={sheetVisible === 0 ? -1 : 0}
+          onClick={() => {
+            setSheetOpen(false);
+            onGallery();
+          }}
+          className="mt-4 h-12 w-full max-w-sm rounded-2xl bg-white text-[17px] font-semibold text-black active:opacity-60"
+        >
+          Открыть галерею
+        </button>
       </div>
     </div>,
     document.body,

@@ -9,6 +9,7 @@ import { FeedEnd } from "@/components/posts/FeedEnd";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { getMyProfile } from "@/lib/auth";
 import { getFeedGames } from "@/lib/lobbies";
+import { getSuggestedPeople } from "@/lib/people";
 import { FEED_START, getFeedPage, getHighlightAuthors } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,11 +27,12 @@ export default async function FeedPage() {
   const profile = await getMyProfile();
   if (!profile) redirect("/onboarding");
 
-  const [page, highlightAuthors, unread, games] = await Promise.all([
+  const [page, highlightAuthors, unread, games, people] = await Promise.all([
     getFeedPage(profile.id, FEED_START),
     getHighlightAuthors(profile.id),
     countUnread(profile.id),
     getFeedGames(),
+    getSuggestedPeople(profile),
   ]);
 
   return (
@@ -66,6 +68,7 @@ export default async function FeedPage() {
         initialPosts={page.posts}
         initialCursor={page.cursor}
         initialDone={page.done}
+        people={people}
         end={<FeedEnd games={games} hasPosts={page.posts.length > 0} />}
       />
     </>

@@ -61,6 +61,14 @@ export default function PointMap({
       applyRussianLabels(map);
       if (appliedDark.current) applyDarkPalette(map);
     });
+    // Подпись авторов карты свёрнута в значок «i», по нажатию раскрывается
+    const collapseAttribution = () => {
+      const attribution = map.getContainer().querySelector(".maplibregl-ctrl-attrib");
+      attribution?.classList.remove("maplibregl-compact-show");
+      attribution?.removeAttribute("open");
+    };
+    map.once("load", collapseAttribution);
+    map.once("idle", collapseAttribution);
     map.on("click", (e) => pickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
     return () => {
       markerRef.current = null;

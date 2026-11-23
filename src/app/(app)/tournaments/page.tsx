@@ -21,7 +21,7 @@ export default async function TournamentsPage() {
     <>
       <PageHeader
         title="Турниры"
-        back="/crews"
+        back="/games"
         right={
           <Link href="/create/tournament" className="flex size-10 items-center justify-center" aria-label="Создать турнир">
             <Plus className="size-6" />

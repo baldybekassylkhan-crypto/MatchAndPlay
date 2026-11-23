@@ -37,7 +37,14 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader title="Мои игры" />
+      <PageHeader
+        title="Мои игры"
+        right={
+          <Link href="/tournaments" className="chip h-9 text-[14px]!">
+            <Trophy className="size-4" aria-hidden /> Турниры
+          </Link>
+        }
+      />
       <div className="no-scrollbar sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 overflow-x-auto glass-bar px-4 py-2">
         <TabLinks
           layoutId="games-tab"

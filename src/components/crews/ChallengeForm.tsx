@@ -3,6 +3,7 @@
 import { Loader2, Swords } from "lucide-react";
 import { useActionState } from "react";
 import { createChallenge, type CrewFormState } from "@/app/actions/crews";
+import { DateTimeInput } from "@/components/ui/DateTimeInput";
 import type { Crew } from "@/lib/crews";
 
 const initial: CrewFormState = { error: null };
@@ -24,10 +25,10 @@ export function ChallengeForm({ target, myCrews, minDate }: { target: Crew; myCr
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Дата" error={state.fields?.start}>
-          <input type="date" name="date" className="input" min={minDate} required />
+          <DateTimeInput type="date" name="date" min={minDate} required />
         </Field>
         <Field label="Время">
-          <input type="time" name="time" className="input" required />
+          <DateTimeInput type="time" name="time" required />
         </Field>
       </div>
       <Field label="Площадка" error={state.fields?.location}>

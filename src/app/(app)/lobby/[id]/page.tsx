@@ -12,6 +12,7 @@ import { RemovePlayerButton } from "@/components/lobby/RemovePlayerButton";
 import { ShareGameButton } from "@/components/lobby/ShareGameButton";
 import { SlotsBar } from "@/components/lobby/SlotsBar";
 import { PageHeader } from "@/components/PageHeader";
+import { TopToast } from "@/components/ui/TopToast";
 import { getUser } from "@/lib/auth";
 import { isCheckinOpen } from "@/lib/checkin";
 import { getCrewMatch } from "@/lib/crews";
@@ -67,13 +68,9 @@ export default async function LobbyPage({
         back="/search"
         right={!isOrganizer && open && !isCrewMatch ? <SaveButton lobbyId={lobby.id} initialSaved={saved} /> : undefined}
       />
+      {created && <TopToast message="Игра опубликована" clearParam="created" />}
 
       <div className="space-y-6 px-5 pt-5 pb-10">
-        {created && (
-          <p className="rounded-2xl bg-accent p-4 font-semibold text-accent-ink">
-            Игра опубликована! Теперь её видят игроки из вашего города.
-          </p>
-        )}
         {lobby.status === "cancelled" && (
           <p className="rounded-2xl bg-danger/10 p-4 font-semibold text-danger">Организатор отменил эту игру</p>
         )}

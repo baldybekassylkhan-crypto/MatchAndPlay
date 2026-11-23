@@ -6,27 +6,31 @@ import { Avatar } from "@/components/Avatar";
 import { CrewCard } from "@/components/crews/CrewCard";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
-import { getMyProfile } from "@/lib/auth";
-import { getCityCrews, getConversations, getMyCrews, type ConversationRow } from "@/lib/crews";
-import { timeAgo } from "@/lib/time";
 import { TabLinks } from "@/components/ui/Segmented";
 import { SportIcon } from "@/components/ui/SportIcon";
+import { getMyProfile } from "@/lib/auth";
+import type { ChatListItem } from "@/lib/chat-list";
+import { getAllChats } from "@/lib/chats";
+import { getCityCrews, getMyCrews } from "@/lib/crews";
+import { timeAgo } from "@/lib/time";
 
-export const metadata = { title: "Команды" };
+export const metadata = { title: "Общение" };
+
+const KIND_LABEL = { crew: "Команда", lobby: "Игра" } as const;
 
 export default async function CrewsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const profile = await getMyProfile();
   if (!profile) redirect("/onboarding");
   const tab = (await searchParams).tab === "chats" ? "chats" : "crews";
 
-  const [myCrews, conversations] = await Promise.all([getMyCrews(profile.id), getConversations()]);
+  const [myCrews, chats] = await Promise.all([getMyCrews(profile.id), getAllChats(profile.id)]);
   const cityCrews = tab === "crews" ? await getCityCrews(profile.city_id, myCrews.map((c) => c.id)) : [];
-  const unread = conversations.reduce((sum, c) => sum + (c.unread > 0 ? 1 : 0), 0);
+  const unread = chats.filter((c) => c.unread > 0).length;
 
   return (
     <>
       <PageHeader
-        title="Команды"
+        title="Общение"
         right={
           <Link href="/crews/new" className="flex size-10 items-center justify-center" aria-label="Создать команду">
             <Plus className="size-6" />
@@ -50,24 +54,23 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
               </>
             ),
           },
-          { href: "/tournaments", label: "Турниры", active: false },
         ]}
       />
 
       {tab === "chats" ? (
-        conversations.length === 0 ? (
+        chats.length === 0 ? (
           <div key="chats" className="animate-fade-up">
             <EmptyState
               icon={MessageCircle}
               title="Чатов пока нет"
-              text="Вступите в команду, чтобы общаться в группе, или нажмите «Написать» в профиле игрока."
-              action={{ href: "/crews", label: "Найти команду" }}
+              text="Здесь появятся личные сообщения, чаты команд и чаты ваших игр."
+              action={{ href: "/search", label: "Найти игру" }}
             />
           </div>
         ) : (
-          <ul key="chats" className="card animate-fade-up mx-4 mt-2 divide-y divide-line overflow-hidden">
-            {conversations.map((c) => (
-              <ConversationItem key={c.id} conversation={c} myId={profile.id} />
+          <ul key="chats" className="card animate-fade-up mx-4 mt-2 mb-8 divide-y divide-line overflow-hidden">
+            {chats.map((c) => (
+              <ChatRow key={c.key} chat={c} />
             ))}
           </ul>
         )
@@ -103,30 +106,39 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
   );
 }
 
-function ConversationItem({ conversation: c, myId }: { conversation: ConversationRow; myId: string }) {
-  const title = c.kind === "crew" ? c.crew?.name : `@${c.other?.username}`;
-  const preview = c.last_text ? `${c.last_user_id === myId ? "Вы: " : ""}${c.last_text}` : "Сообщений пока нет";
-
+function ChatRow({ chat: c }: { chat: ChatListItem }) {
   return (
     <li>
-      <Link href={`/messages/${c.id}`} className="flex items-center gap-3 px-4 py-3">
-        {c.kind === "crew" ? (
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-2" aria-hidden>
-            {c.crew ? <SportIcon sport={c.crew.sport} className="size-6" /> : <Users className="size-6" />}
-          </span>
-        ) : (
+      <Link href={c.href} className="flex items-center gap-3 px-4 py-3 active:bg-surface-2">
+        {c.kind === "direct" ? (
           <Avatar src={c.other?.avatar_url} name={c.other?.username ?? "?"} size={48} />
+        ) : (
+          <span
+            className={clsx(
+              "flex size-12 shrink-0 items-center justify-center rounded-full",
+              c.kind === "lobby" ? "bg-accent/15 text-accent" : "bg-surface-2",
+            )}
+            aria-hidden
+          >
+            {c.sport ? <SportIcon sport={c.sport} className="size-6" /> : <Users className="size-6" />}
+          </span>
         )}
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-2">
-            <span className="truncate font-semibold">{title}</span>
-            <span className="shrink-0 text-xs text-muted">{timeAgo(c.last_at)}</span>
+            <span className="truncate font-semibold">{c.title}</span>
+            <span className="shrink-0 text-xs text-muted">{timeAgo(c.at)}</span>
           </span>
           <span className="flex items-center justify-between gap-2">
-            <span className={clsx("truncate text-sm", c.unread > 0 ? "font-semibold text-ink" : "text-muted")}>{preview}</span>
-            {c.unread > 0 && (
-              <span className="shrink-0 rounded-full bg-danger px-1.5 text-xs leading-5 font-semibold text-white">{c.unread > 99 ? "99+" : c.unread}</span>
-            )}
+            <span className={clsx("truncate text-sm", c.unread > 0 ? "font-semibold text-ink" : "text-muted")}>
+              {c.kind !== "direct" && <span className="text-muted">{KIND_LABEL[c.kind]} · </span>}
+              {c.preview}
+            </span>
+            {c.unread > 0 &&
+              (c.kind === "lobby" ? (
+                <span className="size-2.5 shrink-0 rounded-full bg-danger" role="img" aria-label="Есть новые сообщения" />
+              ) : (
+                <span className="shrink-0 rounded-full bg-danger px-1.5 text-xs leading-5 font-semibold text-white">{c.unread > 99 ? "99+" : c.unread}</span>
+              ))}
           </span>
         </span>
       </Link>

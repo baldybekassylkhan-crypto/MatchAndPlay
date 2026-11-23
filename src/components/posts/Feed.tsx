@@ -2,10 +2,12 @@
 
 import { Loader2, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadFeed } from "@/app/actions/posts";
+import { PeopleCarousel } from "@/components/posts/PeopleCarousel";
 import { PostCard } from "@/components/posts/PostCard";
 import type { FeedCursor } from "@/lib/posts";
+import { hashText, SUGGESTION_GROUP, suggestionSlots, type SuggestedPerson } from "@/lib/suggestions";
 import type { PostWithMeta } from "@/lib/types";
 
 const PULL_THRESHOLD = 70;
@@ -14,11 +16,14 @@ export function Feed({
   initialPosts,
   initialCursor,
   initialDone,
+  people = [],
   end,
 }: {
   initialPosts: PostWithMeta[];
   initialCursor: FeedCursor;
   initialDone: boolean;
+  /** Блоки «Возможно, знакомы» между постами */
+  people?: SuggestedPerson[];
   /** Что показать, когда посты закончились */
   end: React.ReactNode;
 }) {
@@ -32,6 +37,14 @@ export function Feed({
   const sentinel = useRef<HTMLDivElement>(null);
   const touchStart = useRef<number | null>(null);
   const loadingRef = useRef(false);
+
+  const groups = useMemo(() => {
+    const out: SuggestedPerson[][] = [];
+    for (let i = 0; i < people.length; i += SUGGESTION_GROUP) out.push(people.slice(i, i + SUGGESTION_GROUP));
+    return out;
+  }, [people]);
+  const seed = useMemo(() => hashText(people.map((p) => p.id).join()), [people]);
+  const slots = useMemo(() => suggestionSlots(groups.length, posts.length, done, seed), [groups.length, posts.length, done, seed]);
 
   // Свежие данные с сервера (после публикации или pull-to-refresh)
   useEffect(() => {
@@ -102,9 +115,16 @@ export function Feed({
         />
       </div>
 
-      {posts.map((p) => (
-        <PostCard key={p.id} post={p} />
-      ))}
+      {slots.has(0) && <PeopleCarousel people={groups[slots.get(0)!]} />}
+      {posts.map((p, i) => {
+        const group = slots.get(i + 1);
+        return (
+          <Fragment key={p.id}>
+            <PostCard post={p} />
+            {group !== undefined && <PeopleCarousel people={groups[group]} />}
+          </Fragment>
+        );
+      })}
 
       {done ? (
         end

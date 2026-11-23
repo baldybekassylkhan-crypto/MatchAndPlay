@@ -7,6 +7,7 @@ import { saveLobby, type LobbyFormState } from "@/app/actions/lobby";
 import { CityPicker } from "@/components/CityPicker";
 import { MapView, type LatLng } from "@/components/map/Map";
 import { Stepper } from "@/components/Stepper";
+import { DateTimeInput } from "@/components/ui/DateTimeInput";
 import { SportGrid } from "@/components/ui/SportGrid";
 import type { SportId } from "@/lib/sports";
 import { toKzInputs } from "@/lib/time";
@@ -136,13 +137,13 @@ export function LobbyForm({
             <label className="label" htmlFor="date">
               Дата
             </label>
-            <input id="date" name="date" type="date" className="input" defaultValue={start.date} required />
+            <DateTimeInput id="date" name="date" type="date" defaultValue={start.date} required />
           </div>
           <div>
             <label className="label" htmlFor="time">
               Начало
             </label>
-            <input id="time" name="time" type="time" step={300} className="input" defaultValue={start.time} required />
+            <DateTimeInput id="time" name="time" type="time" step={300} defaultValue={start.time} required />
           </div>
         </div>
         <p className="mt-1.5 text-xs text-muted">Время Казахстана (UTC+5)</p>
@@ -200,16 +201,14 @@ export function LobbyForm({
         <span className="label">
           Уровень игроков <span className="font-normal">(необязательно)</span>
         </span>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setLevel(null)} className={clsx("chip", level === null && "chip-active")}>
-            Любой
-          </button>
+        <div className="grid grid-cols-3 gap-2">
           {LEVELS.map((l) => (
             <button
               key={l.id}
               type="button"
-              onClick={() => setLevel(l.id)}
-              className={clsx("chip", level === l.id && "chip-active")}
+              aria-pressed={level === l.id}
+              onClick={() => setLevel(level === l.id ? null : l.id)}
+              className={clsx("chip min-w-0 justify-center truncate px-1.5! text-[14px]!", level === l.id && "chip-active")}
             >
               {l.label}
             </button>
@@ -232,10 +231,6 @@ export function LobbyForm({
         />
         <FieldError message={f.price_kzt} />
       </div>
-
-      <p className="rounded-2xl bg-surface-2 p-3 text-sm text-muted">
-        Вы сами решаете, кого принять: каждая заявка ждёт вашего одобрения.
-      </p>
 
       {state.error && <p className="rounded-2xl bg-danger/10 p-3 text-sm text-danger">{state.error}</p>}
 

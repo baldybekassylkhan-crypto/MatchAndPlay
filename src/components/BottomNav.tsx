@@ -18,8 +18,12 @@ export function BottomNav({ username }: { username: string }) {
 
   // Точка на вкладке «Команды»: считаем при переходах
   const refreshUnread = useCallback(async () => {
-    const { data } = await createClient().rpc("unread_chat_count");
-    setUnreadChats((data as number | null) ?? 0);
+    const supabase = createClient();
+    const [direct, lobby] = await Promise.all([
+      supabase.rpc("unread_chat_count"),
+      supabase.from("notifications").select("id", { count: "exact", head: true }).eq("type", "chat_message").eq("read", false),
+    ]);
+    setUnreadChats(((direct.data as number | null) ?? 0) + (lobby.count ?? 0));
   }, []);
   useEffect(() => {
     refreshUnread();
@@ -29,12 +33,14 @@ export function BottomNav({ username }: { username: string }) {
   useEffect(() => {
     const supabase = createClient();
     let timer: ReturnType<typeof setTimeout>;
+    const onMessage = () => {
+      clearTimeout(timer);
+      timer = setTimeout(refreshUnread, 1000);
+    };
     const channel = supabase
       .channel("nav-unread")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => {
-        clearTimeout(timer);
-        timer = setTimeout(refreshUnread, 1000);
-      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, onMessage)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "lobby_messages" }, onMessage)
       .subscribe();
     return () => {
       clearTimeout(timer);
@@ -47,12 +53,17 @@ export function BottomNav({ username }: { username: string }) {
     { href: "/search", label: "Поиск", icon: Compass, active: pathname.startsWith("/search") },
     {
       href: "/crews",
-      label: "Команды",
+      label: "Общение",
       icon: Users,
-      active: ["/crews", "/messages", "/tournaments", "/admin"].some((p) => pathname.startsWith(p)),
+      active: ["/crews", "/messages"].some((p) => pathname.startsWith(p)),
       badge: unreadChats > 0,
     },
-    { href: "/games", label: "Игры", icon: CalendarCheck, active: pathname.startsWith("/games") },
+    {
+      href: "/games",
+      label: "Игры",
+      icon: CalendarCheck,
+      active: ["/games", "/tournaments", "/admin"].some((p) => pathname.startsWith(p)),
+    },
     {
       href: myProfile,
       label: "Профиль",
@@ -69,7 +80,7 @@ export function BottomNav({ username }: { username: string }) {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition-transform duration-200"
     >
       <div className="pointer-events-auto mx-auto flex max-w-[30rem] items-center gap-2">
-        <ul className="glass grid h-[62px] min-w-0 flex-1 grid-cols-5 rounded-full p-1">
+        <ul className="liquid-glass grid h-[62px] min-w-0 flex-1 grid-cols-5 rounded-full p-1">
           {items.map(({ href, label, icon: Icon, active: routeActive, badge }) => {
             const active = pending ? pending === href : routeActive;
             return (
@@ -87,8 +98,8 @@ export function BottomNav({ username }: { username: string }) {
                   {active && (
                     <motion.span
                       layoutId="bottom-nav-indicator"
-                      transition={SWITCH_SPRING}
-                      className="absolute inset-0 rounded-full bg-surface-2"
+                      transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.9 }}
+                      className="liquid-drop absolute inset-0 rounded-full"
                     />
                   )}
                   <motion.span
@@ -112,7 +123,7 @@ export function BottomNav({ username }: { username: string }) {
           aria-label="Создать"
           aria-current={createActive ? "page" : undefined}
           onClick={() => setPending("/create")}
-          className={clsx("glass flex size-[62px] shrink-0 items-center justify-center rounded-full active:scale-95", createActive ? "text-accent" : "text-ink")}
+          className={clsx("liquid-glass flex size-[62px] shrink-0 items-center justify-center rounded-full active:scale-90", createActive ? "text-accent" : "text-ink")}
         >
           <Plus className="size-7" strokeWidth={2} />
         </Link>

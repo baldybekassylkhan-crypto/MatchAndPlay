@@ -230,7 +230,9 @@ export function PostComposer({
           type="file"
           accept="image/*,video/mp4,video/webm,video/quicktime"
           multiple
-          hidden
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
           onChange={(e) => addFiles(e.target.files)}
         />
       </div>

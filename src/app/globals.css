@@ -164,16 +164,6 @@ select.input {
   background-size: 1.125rem;
 }
 
-/* iOS задаёт полям даты и времени собственную ширину, и они вылезают за край экрана */
-input.input:is([type="date"], [type="time"], [type="datetime-local"]) {
-  appearance: none;
-  -webkit-appearance: none;
-  display: block;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-}
-
 input:is([type="date"], [type="time"], [type="datetime-local"])::-webkit-date-and-time-value {
   min-width: 0;
   margin: 0;
@@ -224,6 +214,89 @@ input[type="checkbox"] {
   background-color: color-mix(in srgb, var(--bg) 72%, transparent);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   backdrop-filter: blur(22px) saturate(180%);
+}
+
+/*
+ * Жидкое стекло меню: почти прозрачная линза с ярким фоном под ней,
+ * световой кромкой по контуру и бликами на верхнем и нижнем крае.
+ */
+.liquid-glass {
+  --lg-tint: rgb(255 255 255 / 0.24);
+  --lg-rim-a: rgb(255 255 255 / 0.95);
+  --lg-rim-b: rgb(255 255 255 / 0.12);
+  --lg-glow: rgb(255 255 255 / 0.6);
+  --lg-glow-low: rgb(255 255 255 / 0.28);
+  --lg-depth: rgb(0 0 0 / 0.07);
+  --lg-shadow: rgb(0 0 0 / 0.2);
+  position: relative;
+  isolation: isolate;
+  background: var(--lg-tint);
+  -webkit-backdrop-filter: blur(7px) saturate(220%) brightness(1.08) contrast(1.04);
+  backdrop-filter: blur(7px) saturate(220%) brightness(1.08) contrast(1.04);
+  box-shadow:
+    inset 0 2px 5px -1px var(--lg-glow-low),
+    inset 0 -7px 11px -7px var(--lg-depth),
+    inset 7px 0 11px -9px var(--lg-glow-low),
+    inset -7px 0 11px -9px var(--lg-glow-low),
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 10px 30px -4px var(--lg-shadow);
+}
+
+/* Световая кромка: ярче там, куда падает свет */
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(128deg, var(--lg-rim-a) 0%, var(--lg-rim-b) 30%, var(--lg-rim-b) 64%, var(--lg-rim-a) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+/* Блики внутри линзы */
+.liquid-glass::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(60% 46% at 16% 0%, var(--lg-glow), transparent 72%),
+    radial-gradient(46% 34% at 88% 100%, var(--lg-glow-low), transparent 74%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Капля, которая переезжает между вкладками */
+.liquid-drop {
+  background: rgb(255 255 255 / 0.34);
+  box-shadow:
+    inset 0 1px 1px rgb(255 255 255 / 0.85),
+    inset 0 -1px 2px rgb(255 255 255 / 0.3),
+    0 2px 8px rgb(0 0 0 / 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  .liquid-glass {
+    --lg-tint: rgb(28 28 32 / 0.42);
+    --lg-rim-a: rgb(255 255 255 / 0.5);
+    --lg-rim-b: rgb(255 255 255 / 0.05);
+    --lg-glow: rgb(255 255 255 / 0.16);
+    --lg-glow-low: rgb(255 255 255 / 0.09);
+    --lg-depth: rgb(0 0 0 / 0.3);
+    --lg-shadow: rgb(0 0 0 / 0.55);
+  }
+  .liquid-drop {
+    background: rgb(255 255 255 / 0.13);
+    box-shadow:
+      inset 0 1px 1px rgb(255 255 255 / 0.3),
+      inset 0 -1px 1px rgb(255 255 255 / 0.07),
+      0 2px 8px rgb(0 0 0 / 0.35);
+  }
 }
 
 /* ───────────── Элементы ───────────── */
@@ -428,6 +501,19 @@ input[type="checkbox"] {
 @media (prefers-color-scheme: dark) {
   .point-map .maplibregl-ctrl-icon {
     filter: invert(1);
+  }
+
+  /* Подпись авторов карты в тёмной теме */
+  :is(.point-map, .city-map) .maplibregl-ctrl-attrib {
+    background-color: rgb(28 28 30 / 0.88);
+    color: #c6cedb;
+  }
+  :is(.point-map, .city-map) .maplibregl-ctrl-attrib a {
+    color: #c6cedb;
+  }
+  :is(.point-map, .city-map) .maplibregl-ctrl-attrib-button {
+    filter: invert(1);
+    background-color: transparent;
   }
 }
 
