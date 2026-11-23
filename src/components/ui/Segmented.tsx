@@ -87,11 +87,14 @@ export function TabLinks({
   items,
   layoutId,
   variant = "pill",
+  fill = false,
   className,
 }: {
   items: { href: string; label: ReactNode; active: boolean; icon?: ReactNode }[];
   layoutId: string;
   variant?: "pill" | "underline";
+  /** Вкладки делят ширину поровну */
+  fill?: boolean;
   className?: string;
 }) {
   const serverActive = items.findIndex((i) => i.active);
@@ -110,8 +113,9 @@ export function TabLinks({
             onClick={() => setActive(idx)}
             aria-current={on ? "page" : undefined}
             className={clsx(
-              "relative flex shrink-0 items-center justify-center gap-1.5 text-sm font-semibold transition-colors duration-200",
+              "relative flex shrink-0 items-center justify-center gap-1.5 text-sm font-semibold transition-[color,transform] duration-200 active:scale-95",
               variant === "pill" ? "rounded-full px-3.5 py-1.5" : "h-11 flex-1",
+              fill && "h-9 min-w-0 flex-1 basis-0",
               variant === "pill" && !on && "bg-surface-2 text-ink",
               on ? (variant === "pill" ? "text-accent-ink" : "text-ink") : "text-muted",
             )}

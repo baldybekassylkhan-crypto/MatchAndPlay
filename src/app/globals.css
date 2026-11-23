@@ -38,7 +38,7 @@
     --accent: #0a84ff;
     --danger: #ff453a;
 
-    --glass-tint: rgb(44 44 46 / 0.55);
+    --glass-tint: rgb(36 36 38 / 0.78);
     --glass-edge: rgb(255 255 255 / 0.24);
     --glass-edge-low: rgb(255 255 255 / 0.08);
     --glass-outline: rgb(255 255 255 / 0.06);
@@ -164,6 +164,22 @@ select.input {
   background-size: 1.125rem;
 }
 
+/* iOS задаёт полям даты и времени собственную ширину, и они вылезают за край экрана */
+input.input:is([type="date"], [type="time"], [type="datetime-local"]) {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+input:is([type="date"], [type="time"], [type="datetime-local"])::-webkit-date-and-time-value {
+  min-width: 0;
+  margin: 0;
+  text-align: left;
+}
+
 input[type="radio"],
 input[type="checkbox"] {
   accent-color: var(--accent);
@@ -237,6 +253,40 @@ input[type="checkbox"] {
 }
 @utility chip-active {
   @apply bg-accent text-accent-ink;
+}
+
+/* ───────────── Камера поста ───────────── */
+
+.camera-button {
+  display: flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.42);
+  color: #ffffff;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.camera-button:active {
+  opacity: 0.6;
+  transform: scale(0.92);
+}
+
+.camera-flash {
+  opacity: 0;
+  animation: camera-flash 0.28s ease-out;
+}
+
+@keyframes camera-flash {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* ───────────── 3D-карта поиска ───────────── */
@@ -326,6 +376,59 @@ input[type="checkbox"] {
   background: #000000;
   scale: 1.14;
   transform-origin: bottom center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .map-pin {
+    background: #0a84ff;
+    box-shadow: 0 0 0 2px #1c1c1e, 0 5px 14px rgb(0 0 0 / 0.55);
+  }
+  .map-pin::after {
+    box-shadow: 2px 2px 0 #1c1c1e;
+  }
+  .map-pin-full {
+    background: #636366;
+  }
+  .map-pin-selected {
+    background: #ffffff;
+    color: #000000;
+  }
+}
+
+/* Пока грузится стиль, карта уже тёмная и не вспыхивает белым */
+@media (prefers-color-scheme: dark) {
+  .city-map,
+  .point-map {
+    background-color: #1b2029;
+  }
+}
+
+/* Точка в формах и на странице игры */
+.map-point {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  background: var(--accent);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.4);
+  rotate: -45deg;
+}
+
+.point-map .maplibregl-ctrl-group {
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--line), 0 3px 10px rgb(0 0 0 / 0.2);
+}
+
+.point-map .maplibregl-ctrl-group button + button {
+  border-top-color: var(--line);
+}
+
+@media (prefers-color-scheme: dark) {
+  .point-map .maplibregl-ctrl-icon {
+    filter: invert(1);
+  }
 }
 
 .map-user-dot {

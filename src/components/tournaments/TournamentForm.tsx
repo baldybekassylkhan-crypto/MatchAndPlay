@@ -9,6 +9,7 @@ import { SPORT_IDS, SPORTS, type SportId } from "@/lib/sports";
 import { toKzInputs } from "@/lib/time";
 import type { Tournament } from "@/lib/tournaments";
 import type { City } from "@/lib/types";
+import { useMapAddress } from "@/lib/use-map-address";
 
 const initial: TournamentFormState = { error: null };
 const SIZES = [4, 8, 16, 32];
@@ -37,6 +38,15 @@ export function TournamentForm({
     const reg = tournament ? new Date(tournament.registration_ends_at) : new Date(Date.now() + 11 * 86_400_000);
     return { start: toKzInputs(start), reg: toKzInputs(reg) };
   }, [tournament]);
+  const address = useMapAddress(tournament?.location_name ?? "");
+  const pickPoint = (p: LatLng) => {
+    setPoint(p);
+    address.lookup(p);
+  };
+  const removePoint = () => {
+    setPoint(null);
+    address.clearAuto();
+  };
   const f = state.fields ?? {};
   const city = cities.find((c) => c.id === selectedCity);
   const center = point ?? (city ? { lat: city.lat, lng: city.lng } : { lat: 48, lng: 67 });
@@ -76,7 +86,7 @@ export function TournamentForm({
             value={selectedCity}
             onChange={(e) => {
               setSelectedCity(Number(e.target.value));
-              setPoint(null);
+              removePoint();
             }}
           >
             {cities.map((c) => (
@@ -88,7 +98,7 @@ export function TournamentForm({
         </Field>
       </div>
       <Field label="Площадка или адрес" error={f.location_name}>
-        <input name="location_name" className="input" maxLength={120} required defaultValue={tournament?.location_name} placeholder="Стадион, зал или адрес" />
+        <input name="location_name" className="input" maxLength={120} required value={address.place} onChange={(e) => address.typePlace(e.target.value)} placeholder={address.loading ? "Определяем адрес…" : "Стадион, зал или адрес"} />
       </Field>
       <div>
         <div className="mb-1.5 flex items-center justify-between">
@@ -97,13 +107,13 @@ export function TournamentForm({
             {point ? "Точка на карте выбрана" : "Отметьте место на карте"}
           </span>
           {point && (
-            <button type="button" onClick={() => setPoint(null)} className="flex items-center gap-1 text-sm text-muted">
+            <button type="button" onClick={removePoint} className="flex items-center gap-1 text-sm text-muted">
               <X className="size-3.5" /> Убрать
             </button>
           )}
         </div>
         <div className="h-48 overflow-hidden rounded-2xl border border-line">
-          <MapView center={center} marker={point} zoom={point ? 15 : 12} onPick={setPoint} className="h-full w-full" />
+          <MapView center={center} marker={point} zoom={point ? 15 : 12} onPick={pickPoint} className="h-full w-full" />
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import { SportGrid } from "@/components/ui/SportGrid";
 import type { SportId } from "@/lib/sports";
 import { toKzInputs } from "@/lib/time";
 import { LEVELS, type City, type Lobby, type SkillLevel } from "@/lib/types";
+import { useMapAddress } from "@/lib/use-map-address";
 import type { VenuePrefill } from "@/lib/venues";
 
 const DEFAULT_DURATION_MIN = 90;
@@ -55,7 +56,16 @@ export function LobbyForm({
     lobby?.lat != null && lobby?.lng != null ? { lat: lobby.lat, lng: lobby.lng } : venue ? { lat: venue.lat, lng: venue.lng } : null,
   );
   const [level, setLevel] = useState<SkillLevel | null>(lobby?.level ?? null);
+  const address = useMapAddress(lobby?.location_name ?? venue?.place ?? "");
   const f = state.fields ?? {};
+  const pickPoint = (p: LatLng) => {
+    setPoint(p);
+    address.lookup(p);
+  };
+  const removePoint = () => {
+    setPoint(null);
+    address.clearAuto();
+  };
 
   const city = cities.find((c) => c.id === cityId);
   const mapCenter = point ?? (city ? { lat: city.lat, lng: city.lng } : { lat: 48.0, lng: 67.0 });
@@ -146,7 +156,7 @@ export function LobbyForm({
           value={cityId}
           onChange={(id) => {
             setCityId(id);
-            setPoint(null);
+            removePoint();
           }}
         />
         <FieldError message={f.city_id} />
@@ -160,8 +170,9 @@ export function LobbyForm({
           id="location_name"
           name="location_name"
           className="input"
-          defaultValue={lobby?.location_name ?? venue?.place ?? ""}
-          placeholder="Стадион «Динамо», поле №2"
+          value={address.place}
+          onChange={(e) => address.typePlace(e.target.value)}
+          placeholder={address.loading ? "Определяем адрес…" : "Стадион «Динамо», поле №2"}
           maxLength={120}
           required
         />
@@ -175,13 +186,13 @@ export function LobbyForm({
             {point ? "Точка на карте выбрана" : "Нажмите на карту, чтобы отметить место"}
           </span>
           {point && (
-            <button type="button" onClick={() => setPoint(null)} className="flex items-center gap-1 text-sm text-muted">
+            <button type="button" onClick={removePoint} className="flex items-center gap-1 text-sm text-muted">
               <X className="size-3.5" /> Убрать
             </button>
           )}
         </div>
         <div className="h-56 overflow-hidden rounded-2xl border border-line">
-          <MapView center={mapCenter} marker={point} zoom={point ? 15 : 12} onPick={setPoint} className="h-full w-full" />
+          <MapView center={mapCenter} marker={point} zoom={point ? 15 : 12} onPick={pickPoint} className="h-full w-full" />
         </div>
       </div>
 

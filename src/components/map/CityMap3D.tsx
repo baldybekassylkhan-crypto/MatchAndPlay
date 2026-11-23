@@ -3,13 +3,12 @@
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
+import { applyDarkPalette, applyRussianLabels, MAP_STYLE, useDarkMode } from "@/lib/map-theme";
 import { GLYPHS, sportGlyph, VENUE_GLYPHS } from "@/lib/sport-icons";
 import { SPORTS } from "@/lib/sports";
 import { lobbySlots, type LobbyWithMeta } from "@/lib/types";
 import { VENUE_KIND_IDS, VENUE_KINDS, venueTitle, type Venue, type VenueKind } from "@/lib/venues";
 
-// Бесплатные векторные карты OpenFreeMap (данные OpenStreetMap) с объёмными зданиями, без ключа API
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const PITCH_3D = 58;
 const BEARING_3D = -18;
 const CITY_ZOOM = 15.2;
@@ -121,7 +120,7 @@ function venuesGeoJson(venues: Venue[]): GeoJSON.FeatureCollection<GeoJSON.Point
   };
 }
 
-function addVenueLayers(map: MapLibreMap) {
+function addVenueLayers(map: MapLibreMap, dark: boolean) {
   for (const kind of VENUE_KIND_IDS) {
     const name = `venue-${kind}`;
     if (!map.hasImage(name)) map.addImage(name, venueIcon(kind), { pixelRatio: 2 });
@@ -141,10 +140,10 @@ function addVenueLayers(map: MapLibreMap) {
     source: VENUE_SOURCE,
     filter: ["has", "point_count"],
     paint: {
-      "circle-color": "#ffffff",
+      "circle-color": dark ? "#2c2c2e" : "#ffffff",
       "circle-opacity": 0.94,
       "circle-radius": ["step", ["get", "point_count"], 13, 10, 15, 40, 18],
-      "circle-stroke-color": "rgba(0,0,0,0.12)",
+      "circle-stroke-color": dark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.12)",
       "circle-stroke-width": 0.5,
     },
   });
@@ -159,7 +158,7 @@ function addVenueLayers(map: MapLibreMap) {
       "text-size": 12,
       "text-allow-overlap": true,
     },
-    paint: { "text-color": "#1c1c1e" },
+    paint: { "text-color": dark ? "#ffffff" : "#1c1c1e" },
   });
   map.addLayer({
     id: VENUE_LAYERS.selected,
@@ -185,7 +184,11 @@ function addVenueLayers(map: MapLibreMap) {
       "text-optional": true,
       "text-max-width": 9,
     },
-    paint: { "text-color": "#111111", "text-halo-color": "#ffffff", "text-halo-width": 1.6 },
+    paint: {
+      "text-color": dark ? "#f2f2f7" : "#111111",
+      "text-halo-color": dark ? "#000000" : "#ffffff",
+      "text-halo-width": 1.6,
+    },
   });
 }
 
@@ -230,8 +233,12 @@ export default function CityMap3D({
   const venuesRef = useRef(venues);
   const showVenuesRef = useRef(showVenues);
   const venuesReady = useRef(false);
+  const selectedVenueRef = useRef(selectedVenueId);
+  const dark = useDarkMode();
+  const darkRef = useRef(dark);
 
   useEffect(() => {
+    selectedVenueRef.current = selectedVenueId;
     selectRef.current = onSelect;
     failRef.current = onFail;
     lobbiesRef.current = lobbies;
@@ -269,16 +276,13 @@ export default function CityMap3D({
 
     map.on("style.load", () => {
       clearTimeout(failTimer);
-      // Подписи на русском, если они есть в данных
-      for (const layer of map.getStyle().layers) {
-        if (layer.type === "symbol" && layer.layout?.["text-field"]) {
-          map.setLayoutProperty(layer.id, "text-field", ["coalesce", ["get", "name:ru"], ["get", "name"], ["get", "name:latin"]]);
-        }
-      }
-      if (map.getLayer("building-3d")) map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.92);
+      applyRussianLabels(map);
+      if (darkRef.current) applyDarkPalette(map);
+      else if (map.getLayer("building-3d")) map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.92);
 
-      addVenueLayers(map);
+      addVenueLayers(map, darkRef.current);
       venuesReady.current = true;
+      map.setFilter(VENUE_LAYERS.selected, ["==", ["get", "id"], selectedVenueRef.current ?? ""]);
       (map.getSource(VENUE_SOURCE) as GeoJSONSource).setData(venuesGeoJson(venuesRef.current));
       for (const id of Object.values(VENUE_LAYERS)) {
         map.setLayoutProperty(id, "visibility", showVenuesRef.current ? "visible" : "none");
@@ -360,6 +364,14 @@ export default function CityMap3D({
     // Город меняется через key у компонента, поэтому центр читаем только при создании
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Тема устройства поменялась: слои площадок пересоздаст обработчик style.load
+  useEffect(() => {
+    if (darkRef.current === dark) return;
+    darkRef.current = dark;
+    venuesReady.current = false;
+    mapRef.current?.setStyle(MAP_STYLE, { diff: false });
+  }, [dark]);
 
   // Пины игр
   useEffect(() => {

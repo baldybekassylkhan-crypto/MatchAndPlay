@@ -5,6 +5,7 @@ import { Film, ImagePlus, Loader2, Trophy, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createPost, discardUploads } from "@/app/actions/posts";
+import { PostCamera } from "@/components/posts/PostCamera";
 import { compressImage, imageExt } from "@/lib/image";
 import { MAX_IMAGE_BYTES, MAX_IMAGE_SIDE, MAX_POST_IMAGES, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, POSTS_BUCKET } from "@/lib/media";
 import { SportGrid } from "@/components/ui/SportGrid";
@@ -63,11 +64,24 @@ export function PostComposer({
   );
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(true);
 
   const hasVideo = drafts.some((d) => d.type === "video");
 
-  async function onFiles(files: FileList | null) {
-    if (!files?.length) return;
+  /** Камера закрывается, только когда файл успешно добавлен. */
+  async function addFiles(files: FileList | File[] | null) {
+    if (await onFiles(files)) setCameraOpen(false);
+  }
+
+  function closeCamera() {
+    setError(null);
+    if (drafts.length > 0) setCameraOpen(false);
+    else if (window.history.length > 1) router.back();
+    else router.push("/");
+  }
+
+  async function onFiles(files: FileList | File[] | null): Promise<boolean> {
+    if (!files?.length) return false;
     setError(null);
     setBusy("Обрабатываем файлы…");
     try {
@@ -84,7 +98,7 @@ export function PostComposer({
         const meta = await videoMeta(file);
         if (meta.duration > MAX_VIDEO_SECONDS + 0.5) throw new Error(`Видео длиннее ${MAX_VIDEO_SECONDS} секунд`);
         setDrafts([{ key: crypto.randomUUID(), preview: URL.createObjectURL(file), type: "video", blob: file, ...meta }]);
-        return;
+        return true;
       }
 
       if (hasVideo) throw new Error("К видео нельзя добавить фото");
@@ -98,8 +112,10 @@ export function PostComposer({
         bmp.close();
       }
       setDrafts((d) => [...d, ...next]);
+      return next.length > 0;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось добавить файл");
+      return false;
     } finally {
       setBusy(null);
       if (inputRef.current) inputRef.current.value = "";
@@ -112,6 +128,8 @@ export function PostComposer({
       if (item) URL.revokeObjectURL(item.preview);
       return d.filter((x) => x.key !== key);
     });
+    // Убрали последнее фото: возвращаемся к съёмке
+    if (drafts.length === 1 && drafts[0].key === key) setCameraOpen(true);
   }
 
   async function publish() {
@@ -155,19 +173,17 @@ export function PostComposer({
 
   return (
     <div className="space-y-6">
+      {cameraOpen && (
+        <PostCamera
+          busy={busy}
+          error={error}
+          onCapture={(file) => addFiles([file])}
+          onGallery={() => inputRef.current?.click()}
+          onClose={closeCamera}
+        />
+      )}
       <div>
-        {drafts.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-line bg-surface text-muted"
-            disabled={busy !== null}
-          >
-            {busy ? <Loader2 className="size-8 animate-spin" /> : <ImagePlus className="size-10" />}
-            <span className="font-semibold text-ink">{busy ?? "Добавить фото или видео"}</span>
-            <span className="text-sm">До {MAX_POST_IMAGES} фото или одно видео до {MAX_VIDEO_SECONDS} секунд</span>
-          </button>
-        ) : (
+        {drafts.length > 0 && (
           <div className="flex snap-x gap-2 overflow-x-auto pb-1">
             {drafts.map((d) => (
               <div key={d.key} className="relative aspect-[4/5] w-48 shrink-0 snap-start overflow-hidden rounded-2xl bg-surface-2">
@@ -196,7 +212,10 @@ export function PostComposer({
             {!hasVideo && drafts.length < MAX_POST_IMAGES && (
               <button
                 type="button"
-                onClick={() => inputRef.current?.click()}
+                onClick={() => {
+                  setError(null);
+                  setCameraOpen(true);
+                }}
                 className="flex aspect-[4/5] w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-line text-muted"
                 disabled={busy !== null}
               >
@@ -212,7 +231,7 @@ export function PostComposer({
           accept="image/*,video/mp4,video/webm,video/quicktime"
           multiple
           hidden
-          onChange={(e) => onFiles(e.target.files)}
+          onChange={(e) => addFiles(e.target.files)}
         />
       </div>
 

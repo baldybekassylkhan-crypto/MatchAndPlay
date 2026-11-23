@@ -29,19 +29,16 @@ const toPost = (p: RawPost): PostWithMeta => {
   return { ...rest, liked: (my_like?.length ?? 0) > 0 };
 };
 
-/** Лента: мои посты и посты тех, с кем я реально играл, за последние две недели. */
+/** Лента: посты всех игроков за последние две недели. Заблокированных скрывает RLS. */
 export async function getFeedPage(
   userId: string,
   cursor: FeedCursor,
 ): Promise<{ posts: PostWithMeta[]; cursor: FeedCursor; done: boolean }> {
   const supabase = await createClient();
-  const { data: playedWith } = await supabase.rpc("get_played_with_ids");
-  const authors = [userId, ...((playedWith as string[] | null) ?? [])];
 
   let query = supabase
     .from("posts")
     .select(POST_SELECT + LIKED_BY_ME)
-    .in("author_id", authors)
     .eq("my_like.user_id", userId)
     .gt("created_at", new Date(Date.now() - FEED_DAYS * 86_400_000).toISOString())
     .order("created_at", { ascending: false })

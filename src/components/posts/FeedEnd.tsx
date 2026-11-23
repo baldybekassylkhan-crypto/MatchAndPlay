@@ -22,7 +22,7 @@ export function FeedEnd({ games, hasPosts }: { games: LobbyWithMeta[]; hasPosts:
         </span>
         <h2 className="mt-3 text-[20px] font-semibold">{hasPosts ? "Вы всё посмотрели" : "Пока здесь тихо"}</h2>
         <p className="mt-1 text-[15px] text-muted">
-          {hasPosts ? "Кто играет сегодня вечером?" : "Сыграйте с кем-нибудь, и их посты появятся здесь."}
+          {hasPosts ? "Кто играет сегодня вечером?" : "Сыграйте и станьте первым, кто поделится игрой."}
         </p>
         <Link href="/search?day=today&times=evening" className="mt-2 inline-flex h-11 items-center px-3 text-[17px] text-accent active:opacity-60">
           Найти игру

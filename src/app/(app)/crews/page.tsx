@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { getMyProfile } from "@/lib/auth";
 import { getCityCrews, getConversations, getMyCrews, type ConversationRow } from "@/lib/crews";
 import { timeAgo } from "@/lib/time";
+import { TabLinks } from "@/components/ui/Segmented";
 import { SportIcon } from "@/components/ui/SportIcon";
 
 export const metadata = { title: "Команды" };
@@ -33,29 +34,45 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
         }
       />
 
-      <nav aria-label="Разделы" className="grid grid-cols-3 gap-2 px-4 py-2">
-        <TabLink href="/crews" active={tab === "crews"} label="Команды" />
-        <TabLink href="/crews?tab=chats" active={tab === "chats"} label="Чаты" badge={unread} />
-        <TabLink href="/tournaments" active={false} label="Турниры" />
-      </nav>
+      <TabLinks
+        fill
+        layoutId="crews-section-tab"
+        className="gap-2 px-4 py-2"
+        items={[
+          { href: "/crews", label: "Команды", active: tab === "crews" },
+          {
+            href: "/crews?tab=chats",
+            active: tab === "chats",
+            label: (
+              <>
+                Чаты
+                {unread > 0 && <span className="rounded-full bg-danger px-1.5 text-xs leading-5 text-white">{unread}</span>}
+              </>
+            ),
+          },
+          { href: "/tournaments", label: "Турниры", active: false },
+        ]}
+      />
 
       {tab === "chats" ? (
         conversations.length === 0 ? (
-          <EmptyState
-            icon={MessageCircle}
-            title="Чатов пока нет"
-            text="Вступите в команду, чтобы общаться в группе, или нажмите «Написать» в профиле игрока."
-            action={{ href: "/crews", label: "Найти команду" }}
-          />
+          <div key="chats" className="animate-fade-up">
+            <EmptyState
+              icon={MessageCircle}
+              title="Чатов пока нет"
+              text="Вступите в команду, чтобы общаться в группе, или нажмите «Написать» в профиле игрока."
+              action={{ href: "/crews", label: "Найти команду" }}
+            />
+          </div>
         ) : (
-          <ul className="card mx-4 mt-2 divide-y divide-line overflow-hidden">
+          <ul key="chats" className="card animate-fade-up mx-4 mt-2 divide-y divide-line overflow-hidden">
             {conversations.map((c) => (
               <ConversationItem key={c.id} conversation={c} myId={profile.id} />
             ))}
           </ul>
         )
       ) : (
-        <div className="space-y-6 px-4 pt-4 pb-8">
+        <div key="crews" className="animate-fade-up space-y-6 px-4 pt-4 pb-8">
           {myCrews.length > 0 && (
             <section className="space-y-2">
               <h2 className="px-1 font-bold">Мои команды</h2>
@@ -83,19 +100,6 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
         </div>
       )}
     </>
-  );
-}
-
-function TabLink({ href, active, label, badge }: { href: string; active: boolean; label: string; badge?: number }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={clsx("flex h-9 items-center justify-center gap-1.5 rounded-full text-sm font-medium", active ? "bg-accent text-accent-ink" : "bg-surface-2 text-ink")}
-    >
-      {label}
-      {!!badge && <span className="rounded-full bg-danger px-1.5 text-xs leading-5 text-white">{badge}</span>}
-    </Link>
   );
 }
 

@@ -5,7 +5,7 @@ import { CalendarCheck, Compass, House, Plus, User, Users } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SWITCH_SPRING } from "@/components/ui/Segmented";
 import { createClient } from "@/lib/supabase/client";
 
@@ -16,29 +16,31 @@ export function BottomNav({ username }: { username: string }) {
   const [unreadChats, setUnreadChats] = useState(0);
   useEffect(() => setPending(null), [pathname]);
 
-  // Точка на вкладке «Команды»: обновляем при переходах и при новых сообщениях (RLS пришлёт только мои чаты)
+  // Точка на вкладке «Команды»: считаем при переходах
+  const refreshUnread = useCallback(async () => {
+    const { data } = await createClient().rpc("unread_chat_count");
+    setUnreadChats((data as number | null) ?? 0);
+  }, []);
+  useEffect(() => {
+    refreshUnread();
+  }, [pathname, refreshUnread]);
+
+  // Одна подписка на всё время работы приложения (RLS пришлёт только мои чаты)
   useEffect(() => {
     const supabase = createClient();
-    let active = true;
     let timer: ReturnType<typeof setTimeout>;
-    const refresh = async () => {
-      const { data } = await supabase.rpc("unread_chat_count");
-      if (active) setUnreadChats((data as number | null) ?? 0);
-    };
-    refresh();
     const channel = supabase
-      .channel(`nav-unread-${pathname}`)
+      .channel("nav-unread")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => {
         clearTimeout(timer);
-        timer = setTimeout(refresh, 1000);
+        timer = setTimeout(refreshUnread, 1000);
       })
       .subscribe();
     return () => {
-      active = false;
       clearTimeout(timer);
       supabase.removeChannel(channel);
     };
-  }, [pathname]);
+  }, [refreshUnread]);
 
   const items = [
     { href: "/", label: "Главная", icon: House, active: pathname === "/" },
@@ -89,10 +91,16 @@ export function BottomNav({ username }: { username: string }) {
                       className="absolute inset-0 rounded-full bg-surface-2"
                     />
                   )}
-                  <span className="relative">
+                  <motion.span
+                    className="relative"
+                    initial={false}
+                    animate={{ scale: active ? 1.08 : 1 }}
+                    whileTap={{ scale: 0.84 }}
+                    transition={SWITCH_SPRING}
+                  >
                     <Icon className="size-[22px]" strokeWidth={active ? 2.2 : 1.8} />
                     {badge && <span className="absolute -top-0.5 -right-1 size-2 rounded-full bg-danger" aria-hidden />}
-                  </span>
+                  </motion.span>
                   <span className="relative">{label}</span>
                 </Link>
               </li>
