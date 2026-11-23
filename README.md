@@ -182,6 +182,13 @@ npm run typecheck && npm run lint && npm run build
 
 Перед запуском выполните в Supabase SQL Editor файл `supabase/migrations/0008_safety_and_flow.sql`. Для удаления аккаунта на Vercel должен быть задан `SUPABASE_SERVICE_ROLE_KEY`. Жалобы лежат в Supabase → Table Editor → `reports`.
 
+## Что готово (этап 9) — QR-отметка и лента с концом
+
+Выполните в Supabase SQL Editor `supabase/migrations/0009_checkin_feed.sql` (после 0008).
+
+- **QR-отметка:** за 30 минут до игры и до 30 минут после неё организатор показывает QR и код, которые меняются каждые 30 секунд. Принятые игроки сканируют QR или вводят код. Игра считается подтверждённой, если отметились минимум двое.
+- **Лента:** ваши посты и посты тех, с кем вы реально играли, за 14 дней, затем игры рядом и экран «Вы всё посмотрели».
+
 ### Установка на iPhone по кабелю (с Windows)
 
 1. GitHub → **Actions → iOS app → Run workflow**, укажите адрес сайта на Vercel. Когда сборка закончится, скачайте `MatchAndPlay-ipa` и распакуйте `MatchAndPlay.ipa`.

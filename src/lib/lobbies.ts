@@ -143,6 +143,23 @@ export async function getLobbyApplications(lobbyId: string): Promise<Application
   return (data as ApplicationWithUser[] | null) ?? [];
 }
 
+/** Кто отметился на игре по QR. */
+export async function getLobbyCheckinIds(lobbyId: string): Promise<Set<string>> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("lobby_checkins").select("user_id").eq("lobby_id", lobbyId);
+  return new Set((data ?? []).map((r) => r.user_id as string));
+}
+
+/** Открытые игры для конца ленты: мой город, ближайшая неделя, сначала мои виды спорта. */
+export async function getFeedGames(limit = 3): Promise<LobbyWithMeta[]> {
+  const supabase = await createClient();
+  const { data: ids } = await supabase.rpc("get_feed_game_ids", { p_limit: limit });
+  const order = (ids as string[] | null) ?? [];
+  if (order.length === 0) return [];
+  const { data } = await supabase.from("lobbies").select(LOBBY_SELECT).in("id", order);
+  return ((data as LobbyWithMeta[] | null) ?? []).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+}
+
 /** Мои заявки на будущие игры. */
 export async function getMyApplications(userId: string): Promise<ApplicationWithLobby[]> {
   const supabase = await createClient();

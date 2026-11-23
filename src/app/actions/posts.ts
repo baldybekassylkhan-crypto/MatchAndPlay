@@ -130,5 +130,5 @@ export async function deleteComment(commentId: string, postId: string) {
 export async function loadFeed(cursor: FeedCursor = FEED_START) {
   const profile = await getMyProfile();
   if (!profile) redirect("/onboarding");
-  return getFeedPage(profile.id, profile.city_id, cursor);
+  return getFeedPage(profile.id, cursor);
 }

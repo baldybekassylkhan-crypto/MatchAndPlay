@@ -35,7 +35,7 @@ create function net.http_post(url text, body jsonb, headers jsonb, timeout_milli
 `;
 await db.exec(stubs);
 
-for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "seed.sql"]) {
+for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "migrations/0009_checkin_feed.sql", "seed.sql"]) {
   let sql = readFileSync(path.join(dir, f), "utf8");
   sql = sql
     .replace(/create extension if not exists pg_cron[^;]*;/, "")
@@ -411,6 +411,66 @@ await q(`select prepare_account_deletion()`);
 row = await lobbyRow(L26);
 check(row.accepted_count === 0 && row.status === "active" && (await appStatus(A26)) === "cancelled", "удаление аккаунта освобождает место в чужой игре", row);
 check((await lobbyRow(L27)).status === "cancelled", "удаление аккаунта отменяет свои будущие игры");
+
+// Этап 9: QR-отметка и лента
+const THIRD = "33333333-3333-4333-8333-333333333333";
+await as(null);
+await db.exec(`insert into auth.users(id, email) values ('${THIRD}', 'third@x.kz')`);
+await as(THIRD);
+await db.exec(`insert into profiles(id, username, city_id, sports, level) values ('${THIRD}', 'third', 1, '{football}', 'amateur')`);
+const L30 = await newLobby(3, "20 minutes");
+await join(L30, ME);
+await join(L30, THIRD);
+await as(ME);
+await expectErr("игрок не может получить код", () => q(`select get_checkin_code($1)`, [L30]), "not_organizer");
+const checkIn = async (lobby, code) => (await q(`select check_in($1, $2) as r`, [lobby, code]))[0].r;
+check((await checkIn(L30, "000000")) === "bad_code", "до показа кода отметиться нельзя");
+await as(ORG);
+const codeInfo = (await q(`select get_checkin_code($1) as c`, [L30]))[0].c;
+check(/^\d{6}$/.test(codeInfo.code) && codeInfo.count === 1, "организатор получил код и отмечен автоматически", codeInfo.count);
+await as(OTHER);
+check((await checkIn(L30, codeInfo.code)) === "not_member", "посторонний не может отметиться даже с верным кодом");
+await as(ME);
+check((await checkIn(L30, codeInfo.code)) === "ok", "принятый игрок отметился по коду");
+check((await checkIn(L30, codeInfo.code)) === "already", "повторная отметка не создаёт дубль");
+check((await q(`select verified_games_count($1) as n`, [ME]))[0].n === 1, "игра с двумя отметками считается подтверждённой");
+await as(THIRD);
+const wrong = codeInfo.code === "000000" ? "000001" : "000000";
+const tries = [];
+for (let i = 0; i < 6; i++) tries.push(await checkIn(L30, wrong));
+check(tries[4] === "bad_code" && tries[5] === "too_many", "после 5 неверных кодов за минуту попытки блокируются", tries.join(","));
+await expectErr("секрет недоступен обычному пользователю", async () => {
+  await db.exec("set role authenticated");
+  try { await q(`select * from private.lobby_checkin_secrets`); } finally { await db.exec("reset role"); }
+}, "permission denied");
+const L31 = await newLobby(2, "3 hours");
+await as(ORG);
+await expectErr("код нельзя получить раньше чем за 30 минут", () => q(`select get_checkin_code($1)`, [L31]), "checkin_closed");
+
+// С кем играли: при отметках считаются только пришедшие
+await as(null);
+await q(`update lobbies set start_time = now() - interval '3 hours', status = 'finished' where id = $1`, [L30]);
+const playedWith = async (uid) => { await as(uid); return (await q(`select get_played_with_ids() as id`)).map((r) => r.id); };
+let pw = await playedWith(ME);
+check(pw.includes(ORG) && !pw.includes(THIRD), "лента: неотметившийся игрок не считается сыгравшим");
+pw = await playedWith(THIRD);
+check(!pw.includes(ME), "лента: связь не появляется и у неотметившегося");
+await as(ORG);
+await q(`select block_user($1)`, [ME]);
+pw = await playedWith(ME);
+check(!pw.includes(ORG), "лента: заблокированный исключён");
+await as(ORG);
+await q(`delete from blocks where blocker_id = $1 and blocked_id = $2`, [ORG, ME]);
+
+// Игры в конце ленты
+const L32 = await newLobby(2, "6 hours");
+await as(ME);
+let feedGames = (await q(`select get_feed_game_ids(10) as id`)).map((r) => r.id);
+const inFeed = (await q(`select count(*)::int n from lobbies l join profiles p on p.id = $1 where l.id = any($2::uuid[]) and l.city_id = p.city_id and l.status = 'active'`, [ME, feedGames]))[0].n;
+check(feedGames.length > 0 && inFeed === feedGames.length, "конец ленты: только открытые игры моего города", feedGames.length);
+await q(`select apply_to_lobby($1, null)`, [L32]);
+feedGames = (await q(`select get_feed_game_ids(10) as id`)).map((r) => r.id);
+check(!feedGames.includes(L32), "конец ленты: игра с моей заявкой скрыта");
 
 realLog(failures ? `\n✗ Провалено проверок: ${failures}` : "\n✓ Все проверки базы данных прошли");
 process.exit(failures ? 1 : 0);

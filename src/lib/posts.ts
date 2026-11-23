@@ -5,26 +5,14 @@ import type { Comment, Post, PostWithMeta } from "@/lib/types";
 export const POST_SELECT =
   "*, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url), lobby:lobbies(id, sport, start_time)";
 
-/** То же, но с inner join на автора — чтобы фильтровать по его городу. */
-const POST_SELECT_BY_CITY =
-  "*, author:profiles!posts_author_id_fkey!inner(id, username, full_name, avatar_url, city_id), lobby:lobbies(id, sport, start_time)";
-
 export const FEED_PAGE = 10;
+/** Лента заканчивается: показываем только посты за последние две недели. */
+const FEED_DAYS = 14;
 
-/**
- * Курсор ленты. Три потока по очереди:
- *  a — подписки и мои посты, b — рекомендации из моего города, c — остальные рекомендации.
- * Значение — created_at последнего показанного поста, "done" — поток закончился.
- */
-export interface FeedCursor {
-  a: string | null;
-  b: string | null;
-  c: string | null;
-}
+/** Курсор ленты — created_at последнего показанного поста. */
+export type FeedCursor = string | null;
 
-export const FEED_START: FeedCursor = { a: null, b: null, c: null };
-
-const inList = (ids: string[]) => `(${ids.join(",")})`;
+export const FEED_START: FeedCursor = null;
 
 /** На кого подписан пользователь (+ он сам). Один запрос на рендер — общий для ленты и кружков хайлайтов. */
 export const getFollowingIds = cache(async (userId: string): Promise<string[]> => {
@@ -36,75 +24,37 @@ export const getFollowingIds = cache(async (userId: string): Promise<string[]> =
 /** Лайк текущего пользователя приходит вместе с постом — без отдельного запроса. */
 const LIKED_BY_ME = ", my_like:likes(user_id)";
 type RawPost = Omit<PostWithMeta, "liked"> & { my_like?: { user_id: string }[] };
-const toPost = (p: RawPost, recommended?: boolean): PostWithMeta => {
+const toPost = (p: RawPost): PostWithMeta => {
   const { my_like, ...rest } = p;
-  return { ...rest, liked: (my_like?.length ?? 0) > 0, ...(recommended !== undefined ? { recommended } : {}) };
+  return { ...rest, liked: (my_like?.length ?? 0) > 0 };
 };
 
+/** Лента: мои посты и посты тех, с кем я реально играл, за последние две недели. */
 export async function getFeedPage(
   userId: string,
-  cityId: number,
   cursor: FeedCursor,
 ): Promise<{ posts: PostWithMeta[]; cursor: FeedCursor; done: boolean }> {
-  const [supabase, mine] = await Promise.all([createClient(), getFollowingIds(userId)]);
+  const supabase = await createClient();
+  const { data: playedWith } = await supabase.rpc("get_played_with_ids");
+  const authors = [userId, ...((playedWith as string[] | null) ?? [])];
 
-  const streams = [
-    {
-      key: "a" as const,
-      recommended: false,
-      build: () => supabase.from("posts").select(POST_SELECT + LIKED_BY_ME).in("author_id", mine),
-    },
-    {
-      key: "b" as const,
-      recommended: true,
-      build: () =>
-        supabase
-          .from("posts")
-          .select(POST_SELECT_BY_CITY + LIKED_BY_ME)
-          .eq("author.city_id", cityId)
-          .not("author_id", "in", inList(mine)),
-    },
-    {
-      key: "c" as const,
-      recommended: true,
-      build: () =>
-        supabase
-          .from("posts")
-          .select(POST_SELECT_BY_CITY + LIKED_BY_ME)
-          .neq("author.city_id", cityId)
-          .not("author_id", "in", inList(mine)),
-    },
-  ];
+  let query = supabase
+    .from("posts")
+    .select(POST_SELECT + LIKED_BY_ME)
+    .in("author_id", authors)
+    .eq("my_like.user_id", userId)
+    .gt("created_at", new Date(Date.now() - FEED_DAYS * 86_400_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(FEED_PAGE);
+  if (cursor) query = query.lt("created_at", cursor);
 
-  // Все три потока одновременно (раньше — по очереди), затем заполняем страницу по приоритету.
-  const fetched = await Promise.all(
-    streams.map(async (s) => {
-      if (cursor[s.key] === "done") return [] as RawPost[];
-      let q = s
-        .build()
-        .eq("my_like.user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(FEED_PAGE);
-      if (cursor[s.key]) q = q.lt("created_at", cursor[s.key]!);
-      const { data } = await q;
-      return (data as unknown as RawPost[] | null) ?? [];
-    }),
-  );
-
-  const next: FeedCursor = { ...cursor };
-  const posts: PostWithMeta[] = [];
-  streams.forEach((s, i) => {
-    if (cursor[s.key] === "done") return;
-    const rows = fetched[i];
-    const taken = rows.slice(0, Math.max(0, FEED_PAGE - posts.length));
-    posts.push(...taken.map((p) => toPost(p, s.recommended)));
-    if (taken.length === rows.length && rows.length < FEED_PAGE) next[s.key] = "done";
-    else if (taken.length > 0) next[s.key] = taken[taken.length - 1].created_at;
-    // taken.length === 0 и поток не пуст — оставляем курсор как был, дойдём до него на следующей странице
-  });
-
-  const done = next.a === "done" && next.b === "done" && next.c === "done";
-  return { posts, cursor: next, done };
+  const { data } = await query;
+  const rows = (data as unknown as RawPost[] | null) ?? [];
+  return {
+    posts: rows.map(toPost),
+    cursor: rows.at(-1)?.created_at ?? cursor,
+    done: rows.length < FEED_PAGE,
+  };
 }
 
 export const getPost = cache(async (id: string, userId: string): Promise<PostWithMeta | null> => {

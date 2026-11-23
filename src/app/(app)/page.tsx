@@ -1,13 +1,14 @@
-import { Newspaper, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
-import { EmptyState } from "@/components/EmptyState";
 import { Logo } from "@/components/Logo";
 import { PageHeader } from "@/components/PageHeader";
 import { Feed } from "@/components/posts/Feed";
+import { FeedEnd } from "@/components/posts/FeedEnd";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { getMyProfile } from "@/lib/auth";
+import { getFeedGames } from "@/lib/lobbies";
 import { FEED_START, getFeedPage, getHighlightAuthors } from "@/lib/posts";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,10 +26,11 @@ export default async function FeedPage() {
   const profile = await getMyProfile();
   if (!profile) redirect("/onboarding");
 
-  const [page, highlightAuthors, unread] = await Promise.all([
-    getFeedPage(profile.id, profile.city_id, FEED_START),
+  const [page, highlightAuthors, unread, games] = await Promise.all([
+    getFeedPage(profile.id, FEED_START),
     getHighlightAuthors(profile.id),
     countUnread(profile.id),
+    getFeedGames(),
   ]);
 
   return (
@@ -60,16 +62,12 @@ export default async function FeedPage() {
         </nav>
       )}
 
-      {page.posts.length === 0 ? (
-        <EmptyState
-          icon={Newspaper}
-          title="Лента пока пустая"
-          text="Подпишитесь на игроков или выложите первый пост с игры — фото, видео или хайлайт."
-          action={{ href: "/create/post", label: "Создать пост" }}
-        />
-      ) : (
-        <Feed initialPosts={page.posts} initialCursor={page.cursor} initialDone={page.done} />
-      )}
+      <Feed
+        initialPosts={page.posts}
+        initialCursor={page.cursor}
+        initialDone={page.done}
+        end={<FeedEnd games={games} hasPosts={page.posts.length > 0} />}
+      />
     </>
   );
 }

@@ -14,10 +14,13 @@ export function Feed({
   initialPosts,
   initialCursor,
   initialDone,
+  end,
 }: {
   initialPosts: PostWithMeta[];
   initialCursor: FeedCursor;
   initialDone: boolean;
+  /** Что показать, когда посты закончились */
+  end: React.ReactNode;
 }) {
   const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
@@ -103,9 +106,13 @@ export function Feed({
         <PostCard key={p.id} post={p} />
       ))}
 
-      <div ref={sentinel} className="flex justify-center py-8 text-sm text-muted">
-        {loading ? <Loader2 className="size-5 animate-spin" /> : done && posts.length > 0 ? "Вы посмотрели всё 🎉" : null}
-      </div>
+      {done ? (
+        end
+      ) : (
+        <div ref={sentinel} className="flex min-h-20 justify-center py-8 text-sm text-muted">
+          {loading && <Loader2 className="size-5 animate-spin" />}
+        </div>
+      )}
     </div>
   );
 }

@@ -44,7 +44,8 @@ export async function updateSession(request: NextRequest) {
     return res;
   };
 
-  if (!user && !isPublic(path)) return redirectTo("/login", path === "/" ? undefined : path);
+  // Вместе с адресом сохраняем параметры: например, код из QR переживёт вход в аккаунт
+  if (!user && !isPublic(path)) return redirectTo("/login", path === "/" ? undefined : path + request.nextUrl.search);
   if (user && path === "/login") return redirectTo("/");
 
   return response;

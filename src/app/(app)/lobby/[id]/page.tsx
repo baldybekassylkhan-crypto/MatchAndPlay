@@ -1,16 +1,19 @@
-import { CalendarDays, Clock, MapPin, MessagesSquare, Signal, Wallet } from "lucide-react";
+import { BadgeCheck, CalendarDays, Clock, MapPin, MessagesSquare, Signal, Wallet } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { MapView } from "@/components/map/Map";
+import { OrganizerCheckIn } from "@/components/lobby/OrganizerCheckIn";
 import { OrganizerPanel } from "@/components/lobby/OrganizerPanel";
 import { PlayerActions } from "@/components/lobby/PlayerActions";
+import { PlayerCheckIn } from "@/components/lobby/PlayerCheckIn";
 import { RemovePlayerButton } from "@/components/lobby/RemovePlayerButton";
 import { ShareGameButton } from "@/components/lobby/ShareGameButton";
 import { SlotsBar } from "@/components/lobby/SlotsBar";
 import { PageHeader } from "@/components/PageHeader";
 import { getUser } from "@/lib/auth";
-import { getLobby, getLobbyApplications, isLobbySaved } from "@/lib/lobbies";
+import { isCheckinOpen } from "@/lib/checkin";
+import { getLobby, getLobbyApplications, getLobbyCheckinIds, isLobbySaved } from "@/lib/lobbies";
 import { SaveButton } from "@/components/lobby/SaveButton";
 import { SPORTS } from "@/lib/sports";
 import { formatLongDate, formatPrice, formatTime, hasStarted } from "@/lib/time";
@@ -29,17 +32,18 @@ export default async function LobbyPage({
   searchParams,
 }: {
   params: Params;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; checkin?: string }>;
 }) {
   const { id } = await params;
-  const { created } = await searchParams;
+  const { created, checkin } = await searchParams;
   const [lobby, user] = await Promise.all([getLobby(id), getUser()]);
   if (!lobby) notFound();
 
   const isOrganizer = user?.id === lobby.organizer_id;
-  const [apps, saved] = await Promise.all([
+  const [apps, saved, checkinIds] = await Promise.all([
     getLobbyApplications(lobby.id),
     user && !isOrganizer ? isLobbySaved(user.id, lobby.id) : Promise.resolve(false),
+    getLobbyCheckinIds(lobby.id),
   ]);
   const myApp = apps.find((a) => a.user_id === user?.id) ?? null;
   const accepted = apps.filter((a) => a.status === "accepted");
@@ -50,6 +54,7 @@ export default async function LobbyPage({
   const open = live && !started;
   const sport = SPORTS[lobby.sport];
   const level = LEVELS.find((l) => l.id === lobby.level);
+  const checkinOpen = isCheckinOpen(lobby);
 
   return (
     <>
@@ -100,6 +105,15 @@ export default async function LobbyPage({
 
         <SlotsBar lobby={lobby} />
 
+        {checkinOpen && isOrganizer && <OrganizerCheckIn lobbyId={lobby.id} total={accepted.length + 1} />}
+        {checkinOpen && myApp?.status === "accepted" && (
+          <PlayerCheckIn
+            lobbyId={lobby.id}
+            checkedIn={checkinIds.has(myApp.user_id)}
+            initialCode={checkin && /^\d{6}$/.test(checkin) ? checkin : null}
+          />
+        )}
+
         {open && (
           <ShareGameButton
             lobbyId={lobby.id}
@@ -135,6 +149,7 @@ export default async function LobbyPage({
                 username={lobby.organizer.username}
                 avatar={lobby.organizer.avatar_url}
                 note={lobby.players_current > 1 ? `Организатор + ещё ${lobby.players_current - 1}` : "Организатор"}
+                checkedIn={checkinIds.has(lobby.organizer_id)}
               />
             )}
             {accepted.map((a) =>
@@ -143,6 +158,7 @@ export default async function LobbyPage({
                   key={a.id}
                   username={a.user.username}
                   avatar={a.user.avatar_url}
+                  checkedIn={checkinIds.has(a.user_id)}
                   action={
                     isOrganizer && open ? (
                       <RemovePlayerButton applicationId={a.id} lobbyId={lobby.id} username={a.user.username} />
@@ -172,17 +188,22 @@ function PersonRow({
   avatar,
   note,
   action,
+  checkedIn,
 }: {
   username: string;
   avatar: string | null;
   note?: string;
   action?: React.ReactNode;
+  checkedIn?: boolean;
 }) {
   return (
     <li className="flex items-center">
       <Link href={`/u/${username}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
         <Avatar src={avatar} name={username} size={36} />
-        <span className="flex-1 truncate font-medium">@{username}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
+          <span className="truncate">@{username}</span>
+          {checkedIn && <BadgeCheck className="size-4 shrink-0 text-accent" aria-label="Отмечен на игре" />}
+        </span>
         {note && <span className="text-sm text-muted">{note}</span>}
       </Link>
       {action}

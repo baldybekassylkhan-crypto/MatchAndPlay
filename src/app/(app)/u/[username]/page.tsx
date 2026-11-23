@@ -1,4 +1,4 @@
-import { MapPin, Settings } from "lucide-react";
+import { BadgeCheck, MapPin, Settings } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
@@ -35,7 +35,7 @@ export default async function ProfilePage({
   const isMe = me?.id === profile.id;
   const activeTab = tab === "highlights" ? "highlights" : "posts";
   const supabase = await createClient();
-  const [counts, following, posts, blockRow] = await Promise.all([
+  const [counts, following, posts, blockRow, verified] = await Promise.all([
     getFollowCounts(profile.id),
     me && !isMe ? isFollowing(me.id, profile.id) : Promise.resolve(false),
     // Все посты сразу: вкладка «Хайлайты» фильтрует их на устройстве, без запроса
@@ -43,7 +43,9 @@ export default async function ProfilePage({
     me && !isMe
       ? supabase.from("blocks").select("blocked_id").eq("blocker_id", me.id).eq("blocked_id", profile.id).maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase.rpc("verified_games_count", { p_user_id: profile.id }),
   ]);
+  const verifiedGames = (verified.data as number | null) ?? 0;
   const blocked = Boolean(blockRow.data);
   const level = LEVELS.find((l) => l.id === profile.level);
 
@@ -79,6 +81,12 @@ export default async function ProfilePage({
             {profile.city?.name_ru ?? "Казахстан"}
             {level && <span>· {level.label}</span>}
           </p>
+          {verifiedGames > 0 && (
+            <p className="flex items-center gap-1 text-sm font-semibold">
+              <BadgeCheck className="size-4 text-accent" />
+              Подтверждено игр по QR: {verifiedGames}
+            </p>
+          )}
           {profile.bio && <p className="whitespace-pre-line">{profile.bio}</p>}
         </div>
 
