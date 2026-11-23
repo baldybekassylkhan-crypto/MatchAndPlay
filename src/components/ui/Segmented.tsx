@@ -41,7 +41,7 @@ export function Segmented<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={clsx(
-        "relative grid rounded-[10px] bg-surface-2 p-0.5",
+        "glass-clear relative grid rounded-[10px] p-0.5",
         className,
       )}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
@@ -65,7 +65,7 @@ export function Segmented<T extends string>({
               <motion.span
                 layoutId={layoutId}
                 transition={SWITCH_SPRING}
-                className="absolute inset-0 rounded-[8px] bg-white shadow-[0_2px_6px_rgb(0_0_0/0.12),0_0_0_0.5px_rgb(0_0_0/0.04)] dark:bg-[#636366]"
+                className="liquid-drop absolute inset-0 rounded-[8px]"
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5">
@@ -116,13 +116,13 @@ export function TabLinks({
               "relative flex shrink-0 items-center justify-center gap-1.5 text-sm font-semibold transition-[color,transform] duration-200 active:scale-95",
               variant === "pill" ? "rounded-full px-3.5 py-1.5" : "h-11 flex-1",
               fill && "h-9 min-w-0 flex-1 basis-0",
-              variant === "pill" && !on && "bg-surface-2 text-ink",
+              variant === "pill" && !on && "glass-clear text-ink",
               on ? (variant === "pill" ? "text-accent-ink" : "text-ink") : "text-muted",
             )}
           >
             {on &&
               (variant === "pill" ? (
-                <motion.span layoutId={layoutId} transition={SWITCH_SPRING} className="absolute inset-0 rounded-full bg-accent" />
+                <motion.span layoutId={layoutId} transition={SWITCH_SPRING} className="glass-accent absolute inset-0 rounded-full" />
               ) : (
                 <motion.span
                   layoutId={layoutId}

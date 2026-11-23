@@ -16,8 +16,8 @@ function likePattern(q: string) {
 }
 
 /**
- * Поиск игр по фильтрам.
- * mode = "swipe": только лобби со свободными местами, без уже просмотренных карточек и своих игр.
+ * Поиск чужих игр по фильтрам.
+ * mode = "swipe": только лобби со свободными местами, без уже просмотренных карточек.
  * Фильтр по расстоянию применяется на устройстве (координаты пользователя не уходят на сервер).
  */
 export async function searchLobbies(
@@ -36,6 +36,8 @@ export async function searchLobbies(
     .eq("city_id", cityId)
     // Матчи между командами закрыты для остальных игроков
     .is("crew_challenge_id", null)
+    // Свои игры находятся в разделе «Игры», в поиске они не нужны
+    .neq("organizer_id", opts.userId)
     .in("status", opts.mode === "swipe" ? ["active"] : ["active", "full"])
     .gt("start_time", from.toISOString())
     .lt("start_time", to.toISOString())
@@ -47,10 +49,7 @@ export async function searchLobbies(
   const pattern = likePattern(filters.q);
   if (pattern) query = query.or(`description.ilike.${pattern},location_name.ilike.${pattern}`);
   if (swipe) {
-    query = query
-      .neq("organizer_id", opts.userId)
-      .eq("my_swipe.user_id", opts.userId)
-      .eq("my_app.user_id", opts.userId);
+    query = query.eq("my_swipe.user_id", opts.userId).eq("my_app.user_id", opts.userId);
   }
 
   const { data } = await query;

@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { Camera, ChevronUp, Images, Loader2, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
+import { hasNativeGallery, pickNativePhoto } from "@/lib/native-gallery";
 
 /** На сколько пикселей нужно потянуть вверх, чтобы шторка галереи осталась открытой. */
 const SWIPE_DISTANCE = 72;
@@ -141,12 +142,19 @@ export function PostCamera({
   };
   const onTouchEnd = () => {
     if (dragStart.current === null) return;
-    // iOS открывает выбор файла только по нажатию, поэтому свайп поднимает шторку с кнопкой
-    setSheetOpen(pullRef.current >= (sheetOpen ? SHEET_KEEP_OPEN : SWIPE_DISTANCE));
+    const keepOpen = pullRef.current >= (sheetOpen ? SHEET_KEEP_OPEN : SWIPE_DISTANCE);
     dragStart.current = null;
     pullRef.current = 0;
     setDragging(false);
     setPull(0);
+    if (keepOpen && hasNativeGallery()) {
+      // В приложении галерея открывается сразу после свайпа
+      setSheetOpen(false);
+      pickNativePhoto().then((file) => file && onCapture(file));
+      return;
+    }
+    // В браузере и старой сборке iOS открывает выбор файла только по нажатию: показываем кнопку
+    setSheetOpen(keepOpen);
   };
   const sheetVisible = dragging ? pull : sheetOpen ? SHEET_HEIGHT : 0;
 

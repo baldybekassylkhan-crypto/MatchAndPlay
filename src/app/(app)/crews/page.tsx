@@ -75,34 +75,64 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
           </ul>
         )
       ) : (
-        <div key="crews" className="animate-fade-up space-y-6 px-4 pt-4 pb-8">
-          {myCrews.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="px-1 font-bold">Мои команды</h2>
+        <div key="crews" className="animate-fade-up space-y-6 px-4 pt-3 pb-8">
+          {myCrews.length > 0 ? (
+            <CrewSection title="Мои команды">
               {myCrews.map((crew) => (
-                <CrewCard key={crew.id} crew={crew} />
+                <li key={crew.id}>
+                  <CrewCard crew={crew} />
+                </li>
               ))}
+              <li>
+                <Link href="/crews/new" className="flex h-12 items-center gap-3 px-4 text-[17px] text-accent active:bg-surface-2">
+                  <Plus className="size-5" aria-hidden /> Новая команда
+                </Link>
+              </li>
+            </CrewSection>
+          ) : (
+            <section className="card flex flex-col items-center px-5 pt-6 pb-5 text-center">
+              <span className="flex items-center" aria-hidden>
+                {(["basketball", "football", "volleyball"] as const).map((sport, i) => (
+                  <span
+                    key={sport}
+                    className={clsx(
+                      "flex items-center justify-center rounded-full border-[3px] border-surface",
+                      i === 1 ? "z-10 -mx-2.5 size-[60px] bg-accent text-accent-ink" : "size-12 bg-[color-mix(in_srgb,var(--accent)_22%,var(--surface))] text-accent",
+                    )}
+                  >
+                    <SportIcon sport={sport} className={i === 1 ? "size-7" : "size-5"} />
+                  </span>
+                ))}
+              </span>
+              <h2 className="mt-4 text-[20px] font-semibold">Своя команда</h2>
+              <p className="mt-1 max-w-[17rem] text-[15px] text-muted">Постоянный состав, общий чат и матчи против других команд.</p>
+              <Link href="/crews/new" className="btn-primary mt-4 w-full">
+                Создать команду
+              </Link>
             </section>
           )}
 
-          <section className="space-y-2">
-            <h2 className="px-1 font-bold">Команды в вашем городе</h2>
-            {cityCrews.length > 0 ? (
-              cityCrews.map((crew) => <CrewCard key={crew.id} crew={crew} />)
-            ) : (
-              <div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
-                <Users className="size-8 text-muted" aria-hidden />
-                <p className="text-muted">{myCrews.length ? "Других команд пока нет." : "Здесь пока нет команд. Станьте первым капитаном!"}</p>
-              </div>
-            )}
-          </section>
-
-          <Link href="/crews/new" className="btn-primary w-full">
-            <Plus className="size-5" /> Создать команду
-          </Link>
+          {cityCrews.length > 0 && (
+            <CrewSection title="Рядом с вами">
+              {cityCrews.map((crew) => (
+                <li key={crew.id}>
+                  <CrewCard crew={crew} />
+                </li>
+              ))}
+            </CrewSection>
+          )}
         </div>
       )}
     </>
+  );
+}
+
+function CrewSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h2 className="mb-1.5 px-4 text-[13px] text-muted">{title}</h2>
+      <ul className="card divide-y divide-line overflow-hidden">{children}</ul>
+    </section>
   );
 }
 

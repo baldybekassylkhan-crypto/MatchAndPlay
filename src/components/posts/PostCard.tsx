@@ -59,33 +59,26 @@ export function PostCard({ post, full = false }: { post: PostWithMeta; full?: bo
 
   return (
     <article className="border-b border-line pb-3">
-      <header className="flex items-center gap-3 px-4 py-3">
-        {post.author && (
-          <Link href={`/u/${post.author.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-            <Avatar src={post.author.avatar_url} name={post.author.username} size={36} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">@{post.author.username}</p>
-              <p className="truncate text-xs text-muted">
-                {post.recommended ? "Рекомендация" : timeAgo(post.created_at)}
-                {sport && ` · ${sport.label}`}
-              </p>
-            </div>
-          </Link>
-        )}
-      </header>
-
-      {post.lobby && (
-        <Link
-          href={`/lobby/${post.lobby.id}`}
-          className="mx-4 mb-2 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-semibold"
-        >
-          <Trophy className="size-4" />
-          Хайлайт с игры: {SPORTS[post.lobby.sport]?.label.toLowerCase()}, {formatLongDate(post.lobby.start_time)}
-        </Link>
-      )}
-
       <div className="relative">
         <MediaCarousel media={post.media} onDoubleTap={onDoubleTap} />
+        {post.author && (
+          // Слой пропускает свайпы и двойное нажатие к фото, кликабелен только автор
+          <header className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/50 to-transparent pt-3 pr-16 pb-8 pl-3">
+            <Link
+              href={`/u/${post.author.username}`}
+              className="pointer-events-auto inline-flex max-w-full items-center gap-2.5 text-white active:opacity-70"
+            >
+              <Avatar src={post.author.avatar_url} name={post.author.username} size={38} className="ring-2 ring-white/90" />
+              <span className="min-w-0 [text-shadow:0_1px_3px_rgb(0_0_0/0.55)]">
+                <span className="block truncate text-sm font-semibold">{post.author.username}</span>
+                <span className="block truncate text-xs text-white/85">
+                  {post.recommended ? "Рекомендация" : timeAgo(post.created_at)}
+                  {sport && ` · ${sport.label}`}
+                </span>
+              </span>
+            </Link>
+          </header>
+        )}
         <AnimatePresence>
           {burst && (
             <motion.span
@@ -100,6 +93,18 @@ export function PostCard({ post, full = false }: { post: PostWithMeta; full?: bo
           )}
         </AnimatePresence>
       </div>
+
+      {post.lobby && (
+        <Link
+          href={`/lobby/${post.lobby.id}`}
+          className="mx-4 mt-2.5 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-semibold"
+        >
+          <Trophy className="size-4 shrink-0" />
+          <span className="truncate">
+            Хайлайт с игры: {SPORTS[post.lobby.sport]?.label.toLowerCase()}, {formatLongDate(post.lobby.start_time)}
+          </span>
+        </Link>
+      )}
 
       <div className="flex items-center gap-1 px-2 pt-2">
         <button

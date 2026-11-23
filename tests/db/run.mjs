@@ -35,7 +35,7 @@ create function net.http_post(url text, body jsonb, headers jsonb, timeout_milli
 `;
 await db.exec(stubs);
 
-for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "migrations/0009_checkin_feed.sql", "migrations/0010_crews_messages.sql", "migrations/0011_tournaments.sql", "seed.sql"]) {
+for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "migrations/0009_checkin_feed.sql", "migrations/0010_crews_messages.sql", "migrations/0011_tournaments.sql", "migrations/0012_private_block_check.sql", "seed.sql"]) {
   let sql = readFileSync(path.join(dir, f), "utf8");
   sql = sql
     .replace(/create extension if not exists pg_cron[^;]*;/, "")
@@ -724,6 +724,28 @@ await expectErr("чужой турнир не отменить", () => q(`select
 await as(HOST);
 await q(`select cancel_tournament($1)`, [T2]);
 check((await tStatus(T2)) === "cancelled", "организатор отменил турнир");
+
+// Чужие блокировки не видны через API
+await as(ME);
+await q(`select block_user($1)`, [ORG]);
+const blockedFor = async (uid) => {
+  await as(uid);
+  return rls(async () => (await q(`select public.is_blocked_between($1, $2) as b`, [ME, ORG]))[0].b);
+};
+check((await blockedFor(OTHER)) === false, "посторонний не узнает о чужой блокировке");
+check((await blockedFor(null)) === false, "гость не узнает о чужой блокировке");
+check((await blockedFor(ME)) === true, "заблокировавший видит блокировку");
+check((await blockedFor(ORG)) === true, "заблокированный участник пары видит блокировку");
+await as(OTHER);
+check((await rls(async () => (await q(`select count(*)::int n from blocks where blocker_id = $1`, [ME]))[0].n)) === 0, "таблица чужих блокировок скрыта");
+await db.exec(`grant select on posts to authenticated`);
+await as(ME);
+await q(`insert into posts(author_id, media) values ($1, $2::jsonb)`, [ME, JSON.stringify([{ type: "image", path: `${ME}/block-check.jpg`, w: 100, h: 100 }])]);
+await as(ORG);
+const hiddenPosts = await rls(async () => (await q(`select count(*)::int n from posts where author_id = $1`, [ME]))[0].n);
+check(hiddenPosts === 0, "RLS по-прежнему скрывает посты при блокировке");
+await as(ME);
+await q(`delete from blocks where blocker_id = $1 and blocked_id = $2`, [ME, ORG]);
 
 realLog(failures ? `\n✗ Провалено проверок: ${failures}` : "\n✓ Все проверки базы данных прошли");
 process.exit(failures ? 1 : 0);
