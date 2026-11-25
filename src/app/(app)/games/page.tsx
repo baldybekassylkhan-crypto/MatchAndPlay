@@ -79,7 +79,7 @@ async function Saved({ userId }: { userId: string }) {
   return lobbies.map((l) => (
     <div key={l.id} className="relative">
       <LobbyCard lobby={l} />
-      <SaveButton lobbyId={l.id} initialSaved className="absolute top-3 right-3 bg-surface-2" />
+      <SaveButton lobbyId={l.id} initialSaved className="glass-clear absolute top-3 right-3" />
     </div>
   ));
 }

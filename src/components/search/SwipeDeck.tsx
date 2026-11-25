@@ -115,7 +115,7 @@ export function SwipeDeck({
         <span className="text-sm text-muted tabular-nums">ещё {deck.length}</span>
         <button
           onClick={() => swipe("right")}
-          className="flex size-14 items-center justify-center rounded-full bg-accent text-accent-ink transition active:scale-90"
+          className="glass-accent flex size-14 items-center justify-center rounded-full text-accent-ink transition active:scale-90"
           aria-label={t("Сохранить")}
         >
           <Heart className="size-6" strokeWidth={2} />

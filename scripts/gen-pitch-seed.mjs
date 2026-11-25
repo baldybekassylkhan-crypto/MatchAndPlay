@@ -271,8 +271,8 @@ const playsSport = (u, sport) => u.sports.includes(sport);
 // ───────────── Картинки для постов ─────────────
 const SPORT_IMG = { football: "football", basketball: "basketball", volleyball: "volleyball", tennis: "tennis", padel: "tennis", running: "running", hockey: "hockey", table_tennis: "tennis", badminton: "volleyball" };
 function sportImages(sport) {
-  const dir = path.join(ROOT, "public/seed/photos", sport);
-  const own = existsSync(dir) ? readdirSync(dir).filter((f) => /\.(jpe?g|webp|png)$/i.test(f)).map((f) => `/seed/photos/${sport}/${f}`) : [];
+  const dir = path.join(ROOT, "public/seed/photos", SPORT_IMG[sport] ?? sport);
+  const own = existsSync(dir) ? readdirSync(dir).filter((f) => /\.(jpe?g|webp|png)$/i.test(f)).map((f) => `/seed/photos/${SPORT_IMG[sport] ?? sport}/${f}`) : [];
   if (own.length) return own;
   const scenes = path.join(ROOT, "public/seed/scenes");
   const base = SPORT_IMG[sport];

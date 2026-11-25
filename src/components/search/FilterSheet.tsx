@@ -113,7 +113,7 @@ export function FilterSheet({
           <button
             onClick={onClose}
             onPointerDown={(e) => e.stopPropagation()}
-            className="flex size-11 items-center justify-center rounded-full bg-surface-2"
+            className="glass-clear flex size-11 items-center justify-center rounded-full"
             aria-label={t("Закрыть")}
           >
             <X className="size-5" />
