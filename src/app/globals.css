@@ -196,12 +196,8 @@ input[type="checkbox"] {
 /* ───────────── Жидкое стекло (как в iOS) ───────────── */
 
 /*
- * Стекло видно не за счёт размытия (на чёрном фоне размывать нечего), а за счёт света:
- *  - световая кромка: яркая по верхнему-левому краю и мягче по нижнему-правому;
- *  - глянцевый блик-«линза» в верхней части;
- *  - «каустика» — светлая полоса у нижнего внутреннего края, будто свет прошёл сквозь толщу;
- *  - корпус чуть светлее фона, тень снизу.
- * Кромка — внутренние тени, поэтому сквозь прозрачный корпус ничего лишнего не просвечивает.
+ * Спокойное стекло без бликов: полупрозрачный корпус, размытие фона,
+ * тонкая светлая кромка и мягкая тень.
  */
 :root {
   --lq-body-top: rgb(255 255 255 / 0.7);
@@ -210,8 +206,8 @@ input[type="checkbox"] {
   --lq-gloss: rgb(255 255 255 / 0.85);
   --lq-glint: rgb(255 255 255 / 0.9);
   --lq-caustic: rgb(255 255 255 / 0.6);
-  --lq-rim-hi: rgb(255 255 255 / 1);
-  --lq-rim-lo: rgb(255 255 255 / 0.65);
+  --lq-rim-hi: rgb(255 255 255 / 0.8);
+  --lq-rim-lo: rgb(255 255 255 / 0.35);
   --lq-outline: rgb(0 0 0 / 0.08);
   --lq-depth: rgb(0 0 0 / 0.07);
   --lq-shadow: rgb(0 0 0 / 0.18);
@@ -219,13 +215,13 @@ input[type="checkbox"] {
 @media (prefers-color-scheme: dark) {
   :root {
     --lq-body-top: rgb(255 255 255 / 0.14);
-    --lq-body-mid: rgb(255 255 255 / 0.05);
+    --lq-body-mid: rgb(255 255 255 / 0.07);
     --lq-body-bottom: rgb(255 255 255 / 0.09);
     --lq-gloss: rgb(255 255 255 / 0.17);
     --lq-caustic: rgb(255 255 255 / 0.16);
     --lq-glint: rgb(255 255 255 / 0.32);
-    --lq-rim-hi: rgb(255 255 255 / 0.85);
-    --lq-rim-lo: rgb(255 255 255 / 0.38);
+    --lq-rim-hi: rgb(255 255 255 / 0.22);
+    --lq-rim-lo: rgb(255 255 255 / 0.08);
     --lq-outline: rgb(255 255 255 / 0.07);
     --lq-depth: rgb(0 0 0 / 0.45);
     --lq-shadow: rgb(0 0 0 / 0.7);
@@ -235,11 +231,7 @@ input[type="checkbox"] {
 /* Обычные кнопки, чипы, переключатели */
 @utility glass-clear {
   background:
-    radial-gradient(28% 60% at 6% 0%, var(--lq-glint), transparent 70%),
-    radial-gradient(24% 50% at 95% 100%, var(--lq-glint), transparent 70%),
-    radial-gradient(90% 55% at 50% -12%, var(--lq-gloss), transparent 62%),
-    radial-gradient(70% 45% at 50% 118%, var(--lq-caustic), transparent 70%),
-    linear-gradient(180deg, var(--lq-body-top), var(--lq-body-mid) 48%, var(--lq-body-bottom));
+    linear-gradient(var(--lq-body-mid), var(--lq-body-mid));
   -webkit-backdrop-filter: blur(10px) saturate(190%) brightness(1.05);
   backdrop-filter: blur(10px) saturate(190%) brightness(1.05);
   box-shadow:
@@ -254,11 +246,7 @@ input[type="checkbox"] {
 /* Парящие элементы: кнопки на карте, панели поверх контента — плотнее и глубже */
 @utility glass {
   background:
-    radial-gradient(28% 60% at 6% 0%, var(--lq-glint), transparent 70%),
-    radial-gradient(24% 50% at 95% 100%, var(--lq-glint), transparent 70%),
-    radial-gradient(90% 55% at 50% -12%, var(--lq-gloss), transparent 62%),
-    radial-gradient(70% 45% at 50% 118%, var(--lq-caustic), transparent 70%),
-    linear-gradient(180deg, var(--lq-body-top), var(--lq-body-mid) 48%, var(--lq-body-bottom)),
+    linear-gradient(var(--lq-body-mid), var(--lq-body-mid)),
     linear-gradient(color-mix(in srgb, var(--bg) 55%, transparent), color-mix(in srgb, var(--bg) 55%, transparent));
   -webkit-backdrop-filter: blur(16px) saturate(220%) brightness(1.06);
   backdrop-filter: blur(16px) saturate(220%) brightness(1.06);
@@ -274,25 +262,16 @@ input[type="checkbox"] {
 /* Цветное жидкое стекло: основные кнопки и выбранные вкладки */
 @utility glass-accent {
   background:
-    radial-gradient(28% 60% at 6% 0%, rgb(255 255 255 / 0.55), transparent 70%),
-    radial-gradient(24% 50% at 95% 100%, rgb(255 255 255 / 0.4), transparent 70%),
-    radial-gradient(95% 60% at 50% -14%, rgb(255 255 255 / 0.5), transparent 60%),
-    radial-gradient(70% 50% at 50% 120%, rgb(255 255 255 / 0.35), transparent 70%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--accent), white 12%),
-      color-mix(in srgb, var(--accent) 84%, transparent) 50%,
-      color-mix(in srgb, var(--accent), black 6%)
-    );
+    linear-gradient(var(--accent), var(--accent));
   -webkit-backdrop-filter: blur(10px) saturate(180%);
   backdrop-filter: blur(10px) saturate(180%);
   box-shadow:
-    inset 1px 1.5px 0.5px -0.5px rgb(255 255 255 / 0.95),
-    inset -1px -1px 0.5px -0.5px rgb(255 255 255 / 0.55),
+    inset 0 1px 0.5px -0.5px rgb(255 255 255 / 0.35),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.08),
     inset 0 0 0 0.5px rgb(255 255 255 / 0.18),
     inset 0 -10px 16px -12px rgb(0 0 0 / 0.35),
     0 1px 2px rgb(0 0 0 / 0.15),
-    0 10px 26px -10px color-mix(in srgb, var(--accent) 80%, transparent);
+    0 6px 16px -8px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* Поля ввода: ровное стекло с тонкой кромкой, без бликов — текст читается лучше */
@@ -311,7 +290,6 @@ input[type="checkbox"] {
 /* Верхние панели: контент проходит под стеклом, снизу световая кромка */
 @utility glass-bar {
   background:
-    radial-gradient(90% 160% at 50% -60%, var(--lq-caustic), transparent 70%),
     linear-gradient(180deg, color-mix(in srgb, var(--bg) 62%, transparent), color-mix(in srgb, var(--bg) 30%, transparent));
   -webkit-backdrop-filter: blur(18px) saturate(220%) brightness(1.05);
   backdrop-filter: blur(18px) saturate(220%) brightness(1.05);
@@ -325,11 +303,7 @@ input[type="checkbox"] {
   position: relative;
   isolation: isolate;
   background:
-    radial-gradient(28% 60% at 6% 0%, var(--lq-glint), transparent 70%),
-    radial-gradient(24% 50% at 95% 100%, var(--lq-glint), transparent 70%),
-    radial-gradient(90% 55% at 50% -14%, var(--lq-gloss), transparent 60%),
-    radial-gradient(70% 45% at 50% 120%, var(--lq-caustic), transparent 70%),
-    linear-gradient(180deg, var(--lq-body-top), var(--lq-body-mid) 50%, var(--lq-body-bottom));
+    linear-gradient(var(--lq-body-mid), var(--lq-body-mid));
   -webkit-backdrop-filter: blur(8px) saturate(220%) brightness(1.08) contrast(1.04);
   backdrop-filter: blur(8px) saturate(220%) brightness(1.08) contrast(1.04);
   box-shadow:
@@ -344,8 +318,6 @@ input[type="checkbox"] {
 /* Капля, которая переезжает между вкладками: самая яркая линза */
 .liquid-drop {
   background:
-    radial-gradient(95% 60% at 50% -14%, rgb(255 255 255 / 0.95), transparent 62%),
-    radial-gradient(70% 50% at 50% 120%, rgb(255 255 255 / 0.7), transparent 70%),
     linear-gradient(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.5));
   box-shadow:
     inset 1px 1.5px 0.5px -0.5px rgb(255 255 255 / 1),
@@ -358,12 +330,10 @@ input[type="checkbox"] {
 @media (prefers-color-scheme: dark) {
   .liquid-drop {
     background:
-      radial-gradient(95% 60% at 50% -14%, rgb(255 255 255 / 0.26), transparent 62%),
-      radial-gradient(70% 50% at 50% 120%, rgb(255 255 255 / 0.18), transparent 70%),
       linear-gradient(rgb(255 255 255 / 0.15), rgb(255 255 255 / 0.08));
     box-shadow:
-      inset 1px 1.5px 0.5px -0.5px rgb(255 255 255 / 0.7),
-      inset -1px -1px 0.5px -0.5px rgb(255 255 255 / 0.3),
+      inset 0 1px 0.5px -0.5px rgb(255 255 255 / 0.25),
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.06),
       inset 0 0 0 0.5px rgb(255 255 255 / 0.08),
       inset 0 -8px 12px -10px rgb(0 0 0 / 0.5),
       0 4px 12px rgb(0 0 0 / 0.5);
