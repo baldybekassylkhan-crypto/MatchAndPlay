@@ -1,5 +1,7 @@
 import { SPORTS, type SportId } from "@/lib/sports";
 import { formatShortDayTime, formatTime } from "@/lib/time";
+import { COURT_ISSUES, type CourtIssue } from "@/lib/courts";
+import { describeWeather, type WeatherReason } from "@/lib/weather";
 
 export interface AppNotification {
   id: number;
@@ -21,13 +23,17 @@ export interface AppNotification {
     message?: string | null;
     text?: string;
     changes?: string[];
+    venue?: string;
+    kind?: string;
+    note?: string | null;
+    weather?: { reasons: WeatherReason[]; precip_prob: number; wind_ms: number; temp_min: number; temp_max: number };
   };
   read: boolean;
   created_at: string;
 }
 
 export type NotificationIconName =
-  | "ban" | "bell" | "check" | "clock" | "crown" | "flag" | "heart" | "leave" | "mail"
+  | "ban" | "bell" | "check" | "clock" | "cloud" | "landmark" | "gift" | "crown" | "flag" | "heart" | "leave" | "mail"
   | "message" | "pencil" | "shield" | "swords" | "trophy" | "userPlus" | "users" | "x";
 
 export interface RenderedNotification {
@@ -123,6 +129,36 @@ export function renderNotification(n: Pick<AppNotification, "type" | "payload">)
         title: "Игра через 2 часа",
         body: `${sport?.label ?? "Игра"} в ${p.start_time ? formatTime(p.start_time) : ""}${p.location ? `, ${p.location}` : ""}. Скоро нельзя будет отменить участие — до ${deadline}.`,
         href: lobbyHref,
+      };
+    }
+    case "weather_alert": {
+      const w = p.weather;
+      const forecast = w
+        ? describeWeather({ reasons: w.reasons, precipProb: w.precip_prob, windMs: w.wind_ms, tempMin: w.temp_min, tempMax: w.temp_max })
+        : "плохая погода";
+      return {
+        icon: "cloud",
+        title: "Погода на игру",
+        body: `${sport?.label ?? "Игра"} в ${p.start_time ? formatTime(p.start_time) : ""}: ожидается ${forecast}. Договоритесь в чате, играете ли.`,
+        href: lobbyHref,
+      };
+    }
+    case "court_report_sent":
+    case "court_report_in_progress":
+    case "court_report_fixed":
+    case "court_report_rejected": {
+      const status = {
+        court_report_sent: ["Обращение передано в акимат", "landmark"],
+        court_report_in_progress: ["Акимат взял в работу", "landmark"],
+        court_report_fixed: ["Площадку исправили! 🎉", "check"],
+        court_report_rejected: ["Обращение отклонено", "x"],
+      }[n.type]!;
+      const issue = p.kind && p.kind in COURT_ISSUES ? COURT_ISSUES[p.kind as CourtIssue].label : "Проблема";
+      return {
+        icon: status[1] as NotificationIconName,
+        title: status[0],
+        body: `${issue}: ${p.venue ?? "площадка"}${p.note ? `. ${p.note}` : ""}`,
+        href: "/courts",
       };
     }
     case "reminder_30m":

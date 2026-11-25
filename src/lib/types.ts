@@ -23,6 +23,9 @@ export interface Profile {
   sports: SportId[];
   level: SkillLevel;
   games_played: number;
+  /** Указывается по желанию: нужен для игр «только для девушек» */
+  gender?: "female" | "male" | null;
+  locale?: "ru" | "kk";
   created_at: string;
   updated_at: string;
 }
@@ -50,6 +53,10 @@ export interface Lobby {
   lng: number | null;
   level: SkillLevel | null;
   price_kzt: number | null;
+  /** true — на улице, false — в зале, null — не указано */
+  is_outdoor?: boolean | null;
+  /** Вступить могут только девушки (пол указан в профиле) */
+  women_only?: boolean;
   status: LobbyStatus;
   /** Матч между двумя командами: вступают только их игроки */
   crew_challenge_id?: string | null;
@@ -60,7 +67,7 @@ export interface Lobby {
 /** Лобби вместе с организатором и городом — для карточек и страницы лобби. */
 export type LobbyWithMeta = Lobby & {
   organizer: MiniProfile | null;
-  city: Pick<City, "name_ru"> | null;
+  city: (Pick<City, "name_ru"> & Partial<Pick<City, "lat" | "lng">>) | null;
 };
 
 export interface LobbyApplication {

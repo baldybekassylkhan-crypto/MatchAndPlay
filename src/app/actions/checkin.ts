@@ -2,17 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkinMessage, type ShakeStatus } from "@/lib/checkin";
 import { getAuthUserId } from "@/lib/supabase/auth-user";
 import { createClient } from "@/lib/supabase/server";
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
-const MESSAGES: Record<string, string> = {
-  bad_code: "Код не подошёл. Попросите организатора показать новый.",
-  too_many: "Слишком много попыток. Подождите минуту.",
-  closed: "Отметка открыта за 30 минут до начала и до 30 минут после конца игры.",
-  not_member: "Отметиться могут только принятые игроки.",
-};
+interface Position {
+  lat: number;
+  lng: number;
+  accuracy: number;
+}
 
 async function requireUser() {
   const supabase = await createClient();
@@ -20,26 +20,38 @@ async function requireUser() {
   return supabase;
 }
 
-export async function getCheckinCode(lobbyId: string) {
-  if (!UUID_RE.test(lobbyId)) return { ok: false as const, error: "Игра не найдена" };
+const validPosition = (p: Position) =>
+  [p.lat, p.lng, p.accuracy].every(Number.isFinite) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180;
+
+/** Отметка встряхиванием: база сама проверяет расстояние до точки игры или до организатора. */
+export async function shakeCheckIn(lobbyId: string, pos: Position) {
+  if (!UUID_RE.test(lobbyId) || !validPosition(pos)) return { ok: false as const, error: "Не удалось определить место" };
   const supabase = await requireUser();
-  const { data, error } = await supabase.rpc("get_checkin_code", { p_lobby_id: lobbyId });
-  if (error || !data) {
-    return {
-      ok: false as const,
-      error: error?.message.includes("checkin_closed") ? MESSAGES.closed : "Не удалось получить код. Попробуйте ещё раз.",
-    };
+  const { data, error } = await supabase.rpc("shake_check_in", {
+    p_lobby_id: lobbyId,
+    p_lat: pos.lat,
+    p_lng: pos.lng,
+    p_accuracy: pos.accuracy,
+  });
+  if (error || !data) return { ok: false as const, error: "Не удалось отметиться. Попробуйте ещё раз." };
+  const r = data as { status: ShakeStatus; method?: string; distance?: number | null; accuracy?: number | null; host?: boolean };
+  if (r.status === "ok" || r.status === "already") {
+    revalidatePath(`/lobby/${lobbyId}`);
+    return { ok: true as const, method: r.method ?? null, distance: r.distance ?? null };
   }
-  const info = data as { code: string; expires_at: string; count: number };
-  return { ok: true as const, code: info.code, expiresAt: info.expires_at, count: info.count };
+  return { ok: false as const, error: checkinMessage(r) ?? "Не удалось отметиться", host: Boolean(r.host) };
 }
 
-export async function submitCheckin(lobbyId: string, code: string) {
-  if (!UUID_RE.test(lobbyId) || !/^\d{6}$/.test(code)) return { ok: false, error: "Введите 6 цифр" };
+/** Организатор держит отметку открытой: обновляем его точку, возвращаем число отметившихся. */
+export async function updateOrganizerPosition(lobbyId: string, pos: Position) {
+  if (!UUID_RE.test(lobbyId) || !validPosition(pos)) return { ok: false as const };
   const supabase = await requireUser();
-  const { data, error } = await supabase.rpc("check_in", { p_lobby_id: lobbyId, p_code: code });
-  if (error) return { ok: false, error: "Не удалось отметиться. Попробуйте ещё раз." };
-  if (data !== "ok" && data !== "already") return { ok: false, error: MESSAGES[data as string] ?? MESSAGES.bad_code };
-  revalidatePath(`/lobby/${lobbyId}`);
-  return { ok: true };
+  const { data, error } = await supabase.rpc("update_organizer_position", {
+    p_lobby_id: lobbyId,
+    p_lat: pos.lat,
+    p_lng: pos.lng,
+    p_accuracy: pos.accuracy,
+  });
+  if (error) return { ok: false as const };
+  return { ok: true as const, count: Number(data) };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,7 @@ const ERRORS: Record<string, string> = {
 };
 
 export function LoginForm({ next, initialError }: { next: string; initialError: string | null }) {
+  const t = useT();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -89,7 +91,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
     <div className="space-y-5">
       <Segmented
         layoutId="auth-mode"
-        ariaLabel="Вход или регистрация"
+        ariaLabel={t("Вход или регистрация")}
         value={mode}
         onChange={(m) => {
           setMode(m);
@@ -97,8 +99,8 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
           setInfo(null);
         }}
         options={[
-          { value: "login", label: "Вход" },
-          { value: "signup", label: "Регистрация" },
+          { value: "login", label: t("Вход") },
+          { value: "signup", label: t("Регистрация") },
         ]}
       />
 
@@ -116,7 +118,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
           className="input"
           type="password"
           autoComplete={mode === "login" ? "current-password" : "new-password"}
-          placeholder={mode === "login" ? "Пароль" : "Пароль (минимум 6 символов)"}
+          placeholder={mode === "login" ? t("Пароль") : t("Пароль (минимум 6 символов)")}
           minLength={6}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -140,7 +142,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15 }}
             >
-              {mode === "login" ? "Войти" : "Создать аккаунт"}
+              {mode === "login" ? t("Войти") : t("Создать аккаунт")}
             </motion.span>
           </AnimatePresence>
         </button>
@@ -150,13 +152,13 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
         <>
           <div className="flex items-center gap-3 text-xs text-muted">
             <div className="h-px flex-1 bg-line" />
-            или
+            {t("или")}
             <div className="h-px flex-1 bg-line" />
           </div>
 
           <button type="button" onClick={onGoogle} className="btn-secondary w-full" disabled={busy !== null}>
             {busy === "google" ? <Loader2 className="size-4 animate-spin" /> : <GoogleMark />}
-            Продолжить с Google
+            {t("Продолжить с Google")}
           </button>
         </>
       )}
@@ -164,7 +166,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
       <p className="text-center text-xs text-muted">
         Продолжая, вы принимаете{" "}
         <Link href="/privacy" className="underline">
-          политику конфиденциальности
+          {t("политику конфиденциальности")}
         </Link>
       </p>
     </div>

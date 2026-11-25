@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<defs>
+<radialGradient id="vig" cx="50%" cy="45%" r="75%"><stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.45"/></radialGradient>
+<filter id="sh" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-opacity="0.35"/></filter>
+</defs>
+<rect width="1080" height="1350" fill="#2b8a6e"/><rect x="220" y="150" width="640" height="1050" fill="#5b3fa0"/>
+<rect x="220" y="150" width="640" height="1050" stroke="#ffffff" stroke-width="8" fill="none"/><line x1="300" y1="150" x2="300" y2="1200" stroke="#ffffff" stroke-width="8" fill="none"/><line x1="780" y1="150" x2="780" y2="1200" stroke="#ffffff" stroke-width="8" fill="none"/>
+<line x1="300" y1="420" x2="780" y2="420" stroke="#ffffff" stroke-width="8" fill="none"/><line x1="300" y1="930" x2="780" y2="930" stroke="#ffffff" stroke-width="8" fill="none"/><line x1="540" y1="420" x2="540" y2="930" stroke="#ffffff" stroke-width="8" fill="none"/>
+<line x1="180" y1="675" x2="900" y2="675" stroke="#f4f4f4" stroke-width="10"/>
+<g filter="url(#sh)"><circle cx="459" cy="1049" r="22" fill="#f4f4f4"/><circle cx="459" cy="1049" r="9.9" fill="#000" opacity="0.25"/></g><g filter="url(#sh)"><circle cx="331" cy="339" r="22" fill="#111"/><circle cx="331" cy="339" r="9.9" fill="#000" opacity="0.25"/></g>
+<g filter="url(#sh)"><circle cx="515.3462948793045" cy="506.47396059378417" r="13" fill="#d8f238"/></g>
+<rect width="1080" height="1350" fill="url(#vig)"/>
+</svg>

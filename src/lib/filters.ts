@@ -47,6 +47,8 @@ export interface LobbyFilters {
   q: string;
   /** Исходный текст умного поиска (для подписи «Вы искали…») */
   ai: string;
+  /** Только игры для девушек */
+  women: boolean;
 }
 
 export type SearchMode = "map" | "list" | "swipe";
@@ -64,6 +66,7 @@ export const EMPTY_FILTERS: LobbyFilters = {
   kw: [],
   q: "",
   ai: "",
+  women: false,
 };
 
 type RawParams = Record<string, string | string[] | undefined>;
@@ -112,6 +115,7 @@ export function parseFilters(params: RawParams): LobbyFilters {
       .slice(0, 5),
     q: one(params.q).trim().slice(0, 100),
     ai: one(params.ai).trim().slice(0, 200),
+    women: one(params.women) === "1",
   };
 }
 
@@ -136,6 +140,7 @@ export function filtersToQuery(f: LobbyFilters, mode?: SearchMode) {
   if (f.maxp) p.set("maxp", String(f.maxp));
   if (f.free) p.set("free", String(f.free));
   if (f.kw.length) p.set("kw", f.kw.join(","));
+  if (f.women) p.set("women", "1");
   if (mode === "swipe" || mode === "list") p.set("mode", mode);
   const s = p.toString();
   return s ? `?${s}` : "";
@@ -151,7 +156,8 @@ export function countActiveFilters(f: LobbyFilters) {
     (f.dist ? 1 : 0) +
     (f.level ? 1 : 0) +
     (f.maxp ? 1 : 0) +
-    (f.free ? 1 : 0)
+    (f.free ? 1 : 0) +
+    (f.women ? 1 : 0)
   );
 }
 
@@ -231,6 +237,7 @@ export function filterChips(f: LobbyFilters): { key: string; label: string; with
   if (f.hours) chips.push({ key: "hours", label: hoursLabel(f.hours), without: { ...f, hours: null } });
   if (f.maxp) chips.push({ key: "maxp", label: `До ${f.maxp} игроков`, without: { ...f, maxp: null } });
   if (f.free) chips.push({ key: "free", label: `Свободно от ${f.free}`, without: { ...f, free: null } });
+  if (f.women) chips.push({ key: "women", label: "Только для девушек", without: { ...f, women: false } });
   if (f.dist) chips.push({ key: "dist", label: `До ${f.dist} км`, without: { ...f, dist: null } });
   if (f.level) {
     chips.push({ key: "level", label: LEVELS.find((l) => l.id === f.level)!.label, without: { ...f, level: null } });

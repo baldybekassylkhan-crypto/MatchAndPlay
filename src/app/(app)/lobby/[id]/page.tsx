@@ -1,13 +1,15 @@
-import { BadgeCheck, CalendarDays, Clock, MapPin, MessagesSquare, Signal, Wallet } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
+import { BadgeCheck, Building2, CalendarDays, Clock, MapPin, MessagesSquare, Signal, Sun, Venus, Wallet } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { Avatar } from "@/components/Avatar";
 import { MapView } from "@/components/map/Map";
 import { CrewMatchJoin } from "@/components/crews/CrewMatchJoin";
-import { OrganizerCheckIn } from "@/components/lobby/OrganizerCheckIn";
 import { OrganizerPanel } from "@/components/lobby/OrganizerPanel";
 import { PlayerActions } from "@/components/lobby/PlayerActions";
-import { PlayerCheckIn } from "@/components/lobby/PlayerCheckIn";
+import { GameWeather } from "@/components/lobby/GameWeather";
+import { ShakeCheckIn } from "@/components/lobby/ShakeCheckIn";
 import { RemovePlayerButton } from "@/components/lobby/RemovePlayerButton";
 import { ShareGameButton } from "@/components/lobby/ShareGameButton";
 import { SlotsBar } from "@/components/lobby/SlotsBar";
@@ -35,10 +37,11 @@ export default async function LobbyPage({
   searchParams,
 }: {
   params: Params;
-  searchParams: Promise<{ created?: string; checkin?: string }>;
+  searchParams: Promise<{ created?: string }>;
 }) {
+  const t = await getT();
   const { id } = await params;
-  const { created, checkin } = await searchParams;
+  const { created } = await searchParams;
   const [lobby, user] = await Promise.all([getLobby(id), getUser()]);
   if (!lobby) notFound();
 
@@ -60,22 +63,24 @@ export default async function LobbyPage({
   const sport = SPORTS[lobby.sport];
   const level = LEVELS.find((l) => l.id === lobby.level);
   const checkinOpen = isCheckinOpen(lobby);
+  const weatherLat = lobby.lat ?? lobby.city?.lat ?? null;
+  const weatherLng = lobby.lng ?? lobby.city?.lng ?? null;
 
   return (
     <>
       <PageHeader
-        title={sport?.label ?? "Игра"}
+        title={t(sport?.label ?? "Игра")}
         back="/search"
         right={!isOrganizer && open && !isCrewMatch ? <SaveButton lobbyId={lobby.id} initialSaved={saved} /> : undefined}
       />
-      {created && <TopToast message="Игра опубликована" clearParam="created" />}
+      {created && <TopToast message={t("Игра опубликована")} clearParam="created" />}
 
       <div className="space-y-6 px-5 pt-5 pb-10">
         {lobby.status === "cancelled" && (
-          <p className="rounded-2xl bg-danger/10 p-4 font-semibold text-danger">Организатор отменил эту игру</p>
+          <p className="rounded-2xl bg-danger/10 p-4 font-semibold text-danger">{t("Организатор отменил эту игру")}</p>
         )}
-        {live && started && <p className="rounded-2xl bg-surface-2 p-4 font-semibold">Игра уже началась</p>}
-        {lobby.status === "finished" && <p className="rounded-2xl bg-surface-2 p-4 font-semibold">Игра завершена</p>}
+        {live && started && <p className="rounded-2xl bg-surface-2 p-4 font-semibold">{t("Игра уже началась")}</p>}
+        {lobby.status === "finished" && <p className="rounded-2xl bg-surface-2 p-4 font-semibold">{t("Игра завершена")}</p>}
         {crewMatch && (
           <p className="rounded-2xl bg-surface-2 p-4 font-semibold">
             Матч команд:{" "}
@@ -89,10 +94,16 @@ export default async function LobbyPage({
           </p>
         )}
 
+        {lobby.women_only && (
+          <p className="flex items-center gap-2 rounded-2xl bg-[#ff2d92]/10 p-4 font-semibold text-[#e0247f]">
+            <Venus className="size-5 shrink-0" aria-hidden /> Только для девушек
+          </p>
+        )}
+
         <section className="space-y-3">
           <p className="text-lg whitespace-pre-line">{lobby.description}</p>
           <ul className="space-y-2 text-[15px]">
-            <Info icon={CalendarDays}>{formatLongDate(lobby.start_time)}</Info>
+            <Info icon={CalendarDays}>{t.d(formatLongDate(lobby.start_time))}</Info>
             <Info icon={Clock}>
               {formatTime(lobby.start_time)}
             </Info>
@@ -100,8 +111,9 @@ export default async function LobbyPage({
               {lobby.location_name}
               {lobby.city && <span className="text-muted">, {lobby.city.name_ru}</span>}
             </Info>
-            <Info icon={Wallet}>{formatPrice(lobby.price_kzt)}</Info>
+            <Info icon={Wallet}>{t.d(formatPrice(lobby.price_kzt))}</Info>
             {level && <Info icon={Signal}>Уровень: {level.label.toLowerCase()}</Info>}
+            {lobby.is_outdoor != null && <Info icon={lobby.is_outdoor ? Sun : Building2}>{lobby.is_outdoor ? t("На улице") : t("В зале")}</Info>}
           </ul>
         </section>
 
@@ -116,21 +128,28 @@ export default async function LobbyPage({
           </div>
         )}
 
+        {lobby.is_outdoor && live && weatherLat != null && weatherLng != null && (
+          <Suspense fallback={null}>
+            <GameWeather lat={weatherLat} lng={weatherLng} start={lobby.start_time} duration={lobby.duration_min} />
+          </Suspense>
+        )}
+
         <SlotsBar lobby={lobby} />
 
-        {checkinOpen && isOrganizer && <OrganizerCheckIn lobbyId={lobby.id} total={accepted.length + 1} />}
-        {checkinOpen && myApp?.status === "accepted" && (
-          <PlayerCheckIn
+        {checkinOpen && (isOrganizer || myApp?.status === "accepted") && user && (
+          <ShakeCheckIn
             lobbyId={lobby.id}
-            checkedIn={checkinIds.has(myApp.user_id)}
-            initialCode={checkin && /^\d{6}$/.test(checkin) ? checkin : null}
+            isOrganizer={isOrganizer}
+            checkedIn={checkinIds.has(user.id)}
+            total={accepted.length + 1}
+            initialCount={checkinIds.size}
           />
         )}
 
         {open && !isCrewMatch && (
           <ShareGameButton
             lobbyId={lobby.id}
-            text={`${sport?.label ?? "Игра"}, ${formatLongDate(lobby.start_time)} в ${formatTime(lobby.start_time)}, ${lobby.location_name}. Присоединяйся!`.trim()}
+            text={`${t(sport?.label ?? "Игра")}, ${t.d(formatLongDate(lobby.start_time))} в ${formatTime(lobby.start_time)}, ${lobby.location_name}. Присоединяйся!`.trim()}
           />
         )}
 
@@ -158,13 +177,13 @@ export default async function LobbyPage({
         )}
 
         <section>
-          <h2 className="mb-2 font-bold">Участники</h2>
+          <h2 className="mb-2 font-bold">{t("Участники")}</h2>
           <ul className="divide-y divide-line card">
             {lobby.organizer && (
               <PersonRow
                 username={lobby.organizer.username}
                 avatar={lobby.organizer.avatar_url}
-                note={lobby.players_current > 1 ? `Организатор + ещё ${lobby.players_current - 1}` : "Организатор"}
+                note={lobby.players_current > 1 ? `Организатор + ещё ${lobby.players_current - 1}` : t("Организатор")}
                 checkedIn={checkinIds.has(lobby.organizer_id)}
               />
             )}
@@ -199,7 +218,7 @@ function Info({ icon: Icon, children }: { icon: typeof Clock; children: React.Re
   );
 }
 
-function PersonRow({
+async function PersonRow({
   username,
   avatar,
   note,
@@ -212,13 +231,14 @@ function PersonRow({
   action?: React.ReactNode;
   checkedIn?: boolean;
 }) {
+  const t = await getT();
   return (
     <li className="flex items-center">
       <Link href={`/u/${username}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
         <Avatar src={avatar} name={username} size={36} />
         <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
           <span className="truncate">@{username}</span>
-          {checkedIn && <BadgeCheck className="size-4 shrink-0 text-accent" aria-label="Отмечен на игре" />}
+          {checkedIn && <BadgeCheck className="size-4 shrink-0 text-accent" aria-label={t("Отмечен на игре")} />}
         </span>
         {note && <span className="text-sm text-muted">{note}</span>}
       </Link>

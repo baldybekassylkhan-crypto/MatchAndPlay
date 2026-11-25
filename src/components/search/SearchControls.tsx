@@ -4,6 +4,7 @@ import { Layers, List, Loader2, Map as MapIcon, SlidersHorizontal, Sparkles, X }
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { smartSearch } from "@/app/actions/smart-search";
+import { useT } from "@/components/I18nProvider";
 import { FilterSheet } from "@/components/search/FilterSheet";
 import { Segmented } from "@/components/ui/Segmented";
 import {
@@ -28,6 +29,7 @@ export function SearchControls({
   cityId: number;
 }) {
   const router = useRouter();
+  const t = useT();
   const [q, setQ] = useState(filters.ai || filters.q);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [thinking, startThinking] = useTransition();
@@ -77,11 +79,11 @@ export function SearchControls({
             className="input pr-10 pl-11"
             type="search"
             enterKeyHint="search"
-            placeholder="Баскетбол в субботу вечером, до 10 человек"
+            placeholder={t("Баскетбол в субботу вечером, до 10 человек")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             maxLength={200}
-            aria-label="Умный поиск игр"
+            aria-label={t("Умный поиск игр")}
             disabled={thinking}
           />
           {q && !thinking && (
@@ -92,7 +94,7 @@ export function SearchControls({
                 setQ("");
                 if (filters.q || filters.ai) go({ ...EMPTY_FILTERS, city: filters.city, dist: filters.dist });
               }}
-              aria-label="Очистить"
+              aria-label={t("Очистить")}
             >
               <X className="size-5" />
             </button>
@@ -102,7 +104,7 @@ export function SearchControls({
           type="button"
           onClick={() => setSheetOpen(true)}
           className="glass relative flex size-12 shrink-0 items-center justify-center rounded-2xl text-ink"
-          aria-label="Фильтры"
+          aria-label={t("Фильтры")}
         >
           <SlidersHorizontal className="size-5" />
           {active > 0 && (
@@ -116,7 +118,7 @@ export function SearchControls({
       {filters.ai && chips.length > 0 && (
         <p className="flex items-center gap-1.5 text-sm text-muted">
           <Sparkles className="size-4 text-ink" />
-          Вот что мы поняли. Лишнее можно убрать:
+          {t("Вот что мы поняли. Лишнее можно убрать:")}
         </p>
       )}
 
@@ -124,7 +126,7 @@ export function SearchControls({
         <Segmented
           size="sm"
           layoutId="search-mode"
-          ariaLabel="Вид результатов"
+          ariaLabel={t("Вид результатов")}
           className="shrink-0"
           value={shownMode}
           onChange={(m) => {
@@ -132,9 +134,9 @@ export function SearchControls({
             go(filters, m);
           }}
           options={[
-            { value: "map", label: "Карта", icon: <MapIcon className="size-4" /> },
-            { value: "list", label: "Список", icon: <List className="size-4" /> },
-            { value: "swipe", label: "Свайпы", icon: <Layers className="size-4" /> },
+            { value: "map", label: t("Карта"), icon: <MapIcon className="size-4" /> },
+            { value: "list", label: t("Список"), icon: <List className="size-4" /> },
+            { value: "swipe", label: t("Свайпы"), icon: <Layers className="size-4" /> },
           ]}
         />
         {chips.map((c) => (
@@ -147,7 +149,7 @@ export function SearchControls({
             }}
             className="chip h-10 shrink-0"
           >
-            {c.label}
+            {t.d(t(c.label))}
             <X className="size-3.5 text-muted" />
           </button>
         ))}

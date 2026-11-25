@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { lobbySlots, type ApplicationWithLobby, type ApplicationWithUser, type LobbyWithMeta } from "@/lib/types";
 
 export const LOBBY_SELECT =
-  "*, organizer:profiles!lobbies_organizer_id_fkey(id, username, full_name, avatar_url), city:cities(name_ru)";
+  "*, organizer:profiles!lobbies_organizer_id_fkey(id, username, full_name, avatar_url), city:cities(name_ru, lat, lng)";
 
 const APP_USER_SELECT = "*, user:profiles!lobby_applications_user_id_fkey(id, username, full_name, avatar_url)";
 
@@ -46,6 +46,7 @@ export async function searchLobbies(
 
   if (filters.sports.length) query = query.in("sport", filters.sports);
   if (filters.level) query = query.or(`level.is.null,level.eq.${filters.level}`);
+  if (filters.women) query = query.eq("women_only", true);
   const pattern = likePattern(filters.q);
   if (pattern) query = query.or(`description.ilike.${pattern},location_name.ilike.${pattern}`);
   if (swipe) {

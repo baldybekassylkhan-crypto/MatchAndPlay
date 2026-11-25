@@ -1,4 +1,5 @@
-import { Crown, Lock, MapPin, MessagesSquare, Swords, Users } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
+import { Crown, Lock, MapPin, MessagesSquare, Swords, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
@@ -8,6 +9,7 @@ import { CrewJoinButton } from "@/components/crews/CrewJoinButton";
 import { PageHeader } from "@/components/PageHeader";
 import { getMyProfile } from "@/lib/auth";
 import { getCaptainCrews, getCrew, getCrewChallenges, getCrewMembers } from "@/lib/crews";
+import { getCrewPlace } from "@/lib/ranking";
 import { SPORTS } from "@/lib/sports";
 import { createClient } from "@/lib/supabase/server";
 import { plural } from "@/lib/time";
@@ -27,6 +29,7 @@ export default async function CrewPage({
   params: Params;
   searchParams: Promise<{ challenged?: string }>;
 }) {
+  const t = await getT();
   const { id } = await params;
   const { challenged } = await searchParams;
   const [crew, profile] = await Promise.all([getCrew(id), getMyProfile()]);
@@ -34,11 +37,12 @@ export default async function CrewPage({
   if (!profile) redirect("/onboarding");
 
   const supabase = await createClient();
-  const [members, challenges, captainCrews, { data: conversation }] = await Promise.all([
+  const [members, challenges, captainCrews, { data: conversation }, place] = await Promise.all([
     getCrewMembers(crew.id),
     getCrewChallenges(crew.id),
     getCaptainCrews(profile.id),
     supabase.from("conversations").select("id").eq("crew_id", crew.id).maybeSingle(),
+    getCrewPlace(crew.city_id, crew.sport, crew.id),
   ]);
 
   const me = members.find((m) => m.user_id === profile.id) ?? null;
@@ -54,7 +58,7 @@ export default async function CrewPage({
       <PageHeader title={crew.name} back="/crews" />
 
       <div className="space-y-6 px-5 pt-5 pb-10">
-        {challenged && <p className="rounded-2xl bg-accent p-4 font-semibold text-accent-ink">Вызов отправлен капитану команды!</p>}
+        {challenged && <p className="rounded-2xl bg-accent p-4 font-semibold text-accent-ink">{t("Вызов отправлен капитану команды!")}</p>}
 
         <section className="flex items-center gap-4">
           <span className="flex size-20 shrink-0 items-center justify-center rounded-3xl bg-surface-2 text-4xl" aria-hidden>
@@ -64,7 +68,7 @@ export default async function CrewPage({
             <h2 className="truncate text-2xl font-extrabold">{crew.name}</h2>
             <p className="flex items-center gap-1 text-sm text-muted">
               <MapPin className="size-3.5 shrink-0" />
-              {crew.city?.name_ru} · {sport?.label}
+              {crew.city?.name_ru} · {t(sport?.label)}
             </p>
             <p className="flex items-center gap-1 text-sm text-muted">
               {crew.is_open ? <Users className="size-3.5" /> : <Lock className="size-3.5" />}
@@ -73,6 +77,23 @@ export default async function CrewPage({
             </p>
           </div>
         </section>
+
+        {place && (
+          <Link
+            href={`/crews/ranking?sport=${crew.sport}&city=${crew.city_id}`}
+            className="flex items-center gap-3 rounded-2xl bg-[color-mix(in_srgb,#f5c542_22%,var(--surface))] p-4 active:opacity-80"
+          >
+            <Trophy className="size-6 shrink-0 text-[#b8860b]" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">
+                {place.rank} место в {crew.city?.name_ru ?? "городе"} в этом месяце
+              </span>
+              <span className="block text-sm text-muted">
+                {place.points} очков · {place.tournaments} {plural(place.tournaments, ["турнир", "турнира", "турниров"])}
+              </span>
+            </span>
+          </Link>
+        )}
 
         {crew.description && <p className="whitespace-pre-line">{crew.description}</p>}
 
@@ -115,7 +136,7 @@ export default async function CrewPage({
 
         {challenges.length > 0 && (
           <section className="space-y-2">
-            <h2 className="font-bold">Матчи и вызовы</h2>
+            <h2 className="font-bold">{t("Матчи и вызовы")}</h2>
             {challenges.map((c) => (
               <ChallengeCard key={c.id} challenge={c} crewId={crew.id} isCaptain={isCaptain} />
             ))}
@@ -123,7 +144,7 @@ export default async function CrewPage({
         )}
 
         <section>
-          <h2 className="mb-2 font-bold">Состав</h2>
+          <h2 className="mb-2 font-bold">{t("Состав")}</h2>
           <ul className="divide-y divide-line card">
             {active.map((m) =>
               m.user ? (

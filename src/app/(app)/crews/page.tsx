@@ -1,5 +1,6 @@
+import { getT } from "@/lib/i18n/server";
 import clsx from "clsx";
-import { MessageCircle, Plus, Users } from "lucide-react";
+import { ChevronRight, MessageCircle, Plus, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
@@ -19,6 +20,7 @@ export const metadata = { title: "Общение" };
 const KIND_LABEL = { crew: "Команда", lobby: "Игра" } as const;
 
 export default async function CrewsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const t = await getT();
   const profile = await getMyProfile();
   if (!profile) redirect("/onboarding");
   const tab = (await searchParams).tab === "chats" ? "chats" : "crews";
@@ -30,9 +32,9 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader
-        title="Общение"
+        title={t("Общение")}
         right={
-          <Link href="/crews/new" className="flex size-10 items-center justify-center" aria-label="Создать команду">
+          <Link href="/crews/new" className="flex size-10 items-center justify-center" aria-label={t("Создать команду")}>
             <Plus className="size-6" />
           </Link>
         }
@@ -49,7 +51,7 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
             active: tab === "chats",
             label: (
               <>
-                Чаты
+                {t("Чаты")}
                 {unread > 0 && <span className="rounded-full bg-danger px-1.5 text-xs leading-5 text-white">{unread}</span>}
               </>
             ),
@@ -62,9 +64,9 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
           <div key="chats" className="animate-fade-up">
             <EmptyState
               icon={MessageCircle}
-              title="Чатов пока нет"
-              text="Здесь появятся личные сообщения, чаты команд и чаты ваших игр."
-              action={{ href: "/search", label: "Найти игру" }}
+              title={t("Чатов пока нет")}
+              text={t("Здесь появятся личные сообщения, чаты команд и чаты ваших игр.")}
+              action={{ href: "/search", label: t("Найти игру") }}
             />
           </div>
         ) : (
@@ -76,8 +78,19 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
         )
       ) : (
         <div key="crews" className="animate-fade-up space-y-6 px-4 pt-3 pb-8">
+          <Link href="/crews/ranking" className="card flex items-center gap-3 p-4 active:bg-surface-2">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-[#f5c542] text-black" aria-hidden>
+              <Trophy className="size-6" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[17px] font-semibold">{t("Рейтинг команд города")}</span>
+              <span className="block truncate text-[14px] text-muted">{t("Футбол и баскетбол · очки за турниры · каждый месяц заново")}</span>
+            </span>
+            <ChevronRight className="size-5 shrink-0 text-muted/60" aria-hidden />
+          </Link>
+
           {myCrews.length > 0 ? (
-            <CrewSection title="Мои команды">
+            <CrewSection title={t("Мои команды")}>
               {myCrews.map((crew) => (
                 <li key={crew.id}>
                   <CrewCard crew={crew} />
@@ -104,16 +117,16 @@ export default async function CrewsPage({ searchParams }: { searchParams: Promis
                   </span>
                 ))}
               </span>
-              <h2 className="mt-4 text-[20px] font-semibold">Своя команда</h2>
-              <p className="mt-1 max-w-[17rem] text-[15px] text-muted">Постоянный состав, общий чат и матчи против других команд.</p>
+              <h2 className="mt-4 text-[20px] font-semibold">{t("Своя команда")}</h2>
+              <p className="mt-1 max-w-[17rem] text-[15px] text-muted">{t("Постоянный состав, общий чат и матчи против других команд.")}</p>
               <Link href="/crews/new" className="btn-primary mt-4 w-full">
-                Создать команду
+                {t("Создать команду")}
               </Link>
             </section>
           )}
 
           {cityCrews.length > 0 && (
-            <CrewSection title="Рядом с вами">
+            <CrewSection title={t("Рядом с вами")}>
               {cityCrews.map((crew) => (
                 <li key={crew.id}>
                   <CrewCard crew={crew} />
@@ -136,7 +149,8 @@ function CrewSection({ title, children }: { title: string; children: React.React
   );
 }
 
-function ChatRow({ chat: c }: { chat: ChatListItem }) {
+async function ChatRow({ chat: c }: { chat: ChatListItem }) {
+  const t = await getT();
   return (
     <li>
       <Link href={c.href} className="flex items-center gap-3 px-4 py-3 active:bg-surface-2">
@@ -156,16 +170,16 @@ function ChatRow({ chat: c }: { chat: ChatListItem }) {
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-2">
             <span className="truncate font-semibold">{c.title}</span>
-            <span className="shrink-0 text-xs text-muted">{timeAgo(c.at)}</span>
+            <span className="shrink-0 text-xs text-muted">{t.d(timeAgo(c.at))}</span>
           </span>
           <span className="flex items-center justify-between gap-2">
             <span className={clsx("truncate text-sm", c.unread > 0 ? "font-semibold text-ink" : "text-muted")}>
-              {c.kind !== "direct" && <span className="text-muted">{KIND_LABEL[c.kind]} · </span>}
+              {c.kind !== "direct" && <span className="text-muted">{t(KIND_LABEL[c.kind])} · </span>}
               {c.preview}
             </span>
             {c.unread > 0 &&
               (c.kind === "lobby" ? (
-                <span className="size-2.5 shrink-0 rounded-full bg-danger" role="img" aria-label="Есть новые сообщения" />
+                <span className="size-2.5 shrink-0 rounded-full bg-danger" role="img" aria-label={t("Есть новые сообщения")} />
               ) : (
                 <span className="shrink-0 rounded-full bg-danger px-1.5 text-xs leading-5 font-semibold text-white">{c.unread > 99 ? "99+" : c.unread}</span>
               ))}

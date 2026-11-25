@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { redirect } from "next/navigation";
 import { CitySwitcher } from "@/components/CitySwitcher";
 import { PageHeader } from "@/components/PageHeader";
@@ -15,6 +16,7 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await getT();
   // Профиль, параметры и города — одновременно (города берутся из серверного кэша)
   const [profile, params, cities] = await Promise.all([getMyProfile(), searchParams, getCities()]);
   if (!profile) redirect("/onboarding");
@@ -59,7 +61,7 @@ export default async function SearchPage({
 
   return (
     <>
-      <PageHeader title="Поиск игр" right={<CitySwitcher cities={cities} value={cityId} />} />
+      <PageHeader title={t("Поиск игр")} right={<CitySwitcher cities={cities} value={cityId} />} />
       <SearchControls key={query} filters={filters} mode={mode} cities={cities} cityId={cityId} />
       <SearchResults
         key={`${mode}${query}`}

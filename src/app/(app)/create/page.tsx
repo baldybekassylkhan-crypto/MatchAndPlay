@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { ChevronRight, ImagePlus, Trophy, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,10 +11,11 @@ const ITEMS: { href: string; icon: LucideIcon; title: string; text: string }[] =
   { href: "/create/post", icon: ImagePlus, title: "Пост", text: "Фото и видео с ваших игр" },
 ];
 
-export default function CreatePage() {
+export default async function CreatePage() {
+  const t = await getT();
   return (
     <>
-      <PageHeader title="Создать" />
+      <PageHeader title={t("Создать")} />
       <div className="px-4 pt-3">
         <ul className="card divide-y divide-line overflow-hidden">
           {ITEMS.map(({ href, icon: Icon, title, text }) => (
@@ -23,8 +25,8 @@ export default function CreatePage() {
                   <Icon className="size-5" strokeWidth={1.9} aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[17px] font-medium">{title}</span>
-                  <span className="block truncate text-[14px] text-muted">{text}</span>
+                  <span className="block text-[17px] font-medium">{t(title)}</span>
+                  <span className="block truncate text-[14px] text-muted">{t(text)}</span>
                 </span>
                 <ChevronRight className="size-5 shrink-0 text-muted/60" aria-hidden />
               </Link>

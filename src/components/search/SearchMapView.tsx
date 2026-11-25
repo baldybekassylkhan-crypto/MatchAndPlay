@@ -1,7 +1,8 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import clsx from "clsx";
-import { Clock, Landmark, List, LocateFixed, Loader2, MapPin, MapPinOff, Plus, X } from "lucide-react";
+import { CircleAlert, Clock, Landmark, List, LocateFixed, Loader2, MapPin, MapPinOff, Plus, TicketCheck, TriangleAlert, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,8 +12,11 @@ import { distanceKm } from "@/lib/geo";
 import { SPORTS } from "@/lib/sports";
 import { formatDayTime, formatPrice, plural } from "@/lib/time";
 import { lobbySlots, type LobbyWithMeta } from "@/lib/types";
+import { COURT_ISSUES, OPEN_STATUSES, courtReportHref, isFreeCourt, type CourtReport } from "@/lib/courts";
+import { createClient } from "@/lib/supabase/client";
 import { VENUE_KINDS, venueCreateHref, venueTitle, type Venue } from "@/lib/venues";
 import { SportIcon } from "@/components/ui/SportIcon";
+import { WomenOnlyBadge } from "@/components/lobby/LobbyCard";
 
 // WebGL-карта работает только в браузере и грузится отдельно, чтобы не утяжелять остальные страницы
 const CityMap3D = dynamic(() => import("@/components/map/CityMap3D"), {
@@ -41,6 +45,7 @@ export function SearchMapView({
   listHref: string;
   controls: React.ReactNode;
 }) {
+  const t = useT();
   const all = useMemo(() => [...lobbies, ...similar], [lobbies, similar]);
   const { items } = useDistanceFilter(all, filters.dist);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -53,6 +58,8 @@ export function SearchMapView({
   const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [showVenues, setShowVenues] = useState(true);
+  const [freeOnly, setFreeOnly] = useState(false);
+  const [issues, setIssues] = useState<Pick<CourtReport, "venue_id" | "kind" | "votes">[]>([]);
   const carousel = useRef<HTMLDivElement>(null);
   const programmatic = useRef(false);
   const programmaticTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -73,6 +80,22 @@ export function SearchMapView({
 
   const pinned = useMemo(() => cards.filter((c) => c.lobby.lat != null && c.lobby.lng != null).map((c) => c.lobby), [cards]);
   const selectedVenue = useMemo(() => venues.find((v) => v.id === selectedVenueId) ?? null, [venues, selectedVenueId]);
+  const shownVenues = useMemo(() => (freeOnly ? venues.filter(isFreeCourt) : venues), [venues, freeOnly]);
+
+  // Открытые обращения о проблемах на площадках города
+  useEffect(() => {
+    let active = true;
+    createClient()
+      .from("court_reports")
+      .select("venue_id, kind, votes")
+      .eq("city_id", cityId)
+      .in("status", OPEN_STATUSES)
+      .limit(500)
+      .then(({ data }) => active && setIssues((data as typeof issues | null) ?? []));
+    return () => {
+      active = false;
+    };
+  }, [cityId]);
 
   // Площадки города лежат отдельным файлом и грузятся только вместе с картой
   useEffect(() => {
@@ -193,10 +216,10 @@ export function SearchMapView({
         {failed ? (
           <div className="flex size-full flex-col items-center justify-center gap-3 px-8 text-center">
             <MapPinOff className="size-8 text-muted" aria-hidden />
-            <p className="font-bold">Карта не загрузилась</p>
-            <p className="text-sm text-muted">Проверьте интернет или откройте игры списком.</p>
+            <p className="font-bold">{t("Карта не загрузилась")}</p>
+            <p className="text-sm text-muted">{t("Проверьте интернет или откройте игры списком.")}</p>
             <Link href={listHref} className="btn-primary mt-1">
-              Показать списком
+              {t("Показать списком")}
             </Link>
           </div>
         ) : (
@@ -205,7 +228,7 @@ export function SearchMapView({
             lobbies={pinned}
             selectedId={selectedId}
             onSelect={selectFromMap}
-            venues={venues}
+            venues={shownVenues}
             selectedVenueId={selectedVenueId}
             onSelectVenue={selectVenue}
             showVenues={showVenues}
@@ -232,7 +255,7 @@ export function SearchMapView({
           <div className="mb-2 flex justify-end px-3">
             <div className="glass pointer-events-auto flex flex-col divide-y divide-line overflow-hidden rounded-full">
             <MapButton
-              label={showVenues ? "Скрыть площадки" : "Показать площадки"}
+              label={showVenues ? t("Скрыть площадки") : t("Показать площадки")}
               pressed={showVenues}
               onClick={() => {
                 setShowVenues((v) => !v);
@@ -241,10 +264,21 @@ export function SearchMapView({
             >
               <Landmark className="size-5" />
             </MapButton>
-            <MapButton label={is3D ? "Плоская карта" : "Объёмная карта"} onClick={() => setIs3D((v) => !v)}>
+            <MapButton
+              label={freeOnly ? t("Показать все площадки") : t("Только бесплатные площадки")}
+              pressed={freeOnly}
+              onClick={() => {
+                setFreeOnly((v) => !v);
+                setShowVenues(true);
+                setSelectedVenueId(null);
+              }}
+            >
+              <TicketCheck className="size-5" />
+            </MapButton>
+            <MapButton label={is3D ? t("Плоская карта") : t("Объёмная карта")} onClick={() => setIs3D((v) => !v)}>
               <span className="text-[13px] font-semibold">{is3D ? "2D" : "3D"}</span>
             </MapButton>
-            <MapButton label="Показать, где я" onClick={locate} disabled={locating}>
+            <MapButton label={t("Показать, где я")} onClick={locate} disabled={locating}>
               {locating ? <Loader2 className="size-5 animate-spin" /> : <LocateFixed className="size-5" />}
             </MapButton>
             </div>
@@ -256,11 +290,12 @@ export function SearchMapView({
               cityId={cityId}
               userPos={userPos}
               gamesHere={pinned.filter((l) => distanceKm(l.lat!, l.lng!, selectedVenue.lat, selectedVenue.lng) < 0.15).length}
+              issues={issues.filter((i) => i.venue_id === selectedVenue.id)}
               onClose={() => setSelectedVenueId(null)}
             />
           ) : cards.length === 0 ? (
             <div className="glass map-sheet pointer-events-auto mx-3 mb-2 flex items-center gap-3 rounded-[1.5rem] p-3.5">
-              <p className="min-w-0 flex-1 text-sm font-semibold">Рядом пока нет игр. Создайте первую!</p>
+              <p className="min-w-0 flex-1 text-sm font-semibold">{t("Рядом пока нет игр. Создайте первую!")}</p>
               <Link href="/create/lobby" className="btn-primary h-9 shrink-0 rounded-full px-3.5 text-[15px]">
                 <Plus className="size-4" /> Игра
               </Link>
@@ -269,7 +304,7 @@ export function SearchMapView({
             <>
               <div className="flex items-center justify-between px-4 pb-1.5">
                 <span className="glass rounded-full px-3 py-1.5 text-[13px] font-medium">
-                  {cards.length} {plural(cards.length, ["игра", "игры", "игр"])} {userPos ? "рядом" : "в городе"}
+                  {cards.length} {plural(cards.length, ["игра", "игры", "игр"])} {userPos ? t("рядом") : t("в городе")}
                 </span>
                 <Link href={listHref} className="glass pointer-events-auto flex h-8 items-center gap-1 rounded-full px-3 text-[13px] font-medium">
                   <List className="size-3.5" /> Списком
@@ -327,14 +362,18 @@ function VenueCard({
   cityId,
   userPos,
   gamesHere,
+  issues,
   onClose,
 }: {
   venue: Venue;
   cityId: number;
   userPos: { lat: number; lng: number } | null;
   gamesHere: number;
+  issues: Pick<CourtReport, "kind" | "votes">[];
   onClose: () => void;
 }) {
+  const t = useT();
+  const free = isFreeCourt(venue);
   const kind = VENUE_KINDS[venue.k];
   const km = userPos ? distanceKm(userPos.lat, userPos.lng, venue.lat, venue.lng) : null;
 
@@ -347,28 +386,50 @@ function VenueCard({
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-semibold">{venueTitle(venue)}</h2>
           <p className="truncate text-sm text-muted">
-            {kind.label}
+            {t(kind.label)}
             {km != null && ` · ${km < 1 ? `${Math.round(km * 1000)} м` : `${km.toFixed(1)} км`}`}
           </p>
           {venue.a && <p className="truncate text-sm text-muted">{venue.a}</p>}
+          {free && (
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
+              <TicketCheck className="size-3.5" aria-hidden /> Открытая площадка · бесплатно
+            </p>
+          )}
         </div>
-        <button type="button" onClick={onClose} className="-mt-1 -mr-1 flex size-10 shrink-0 items-center justify-center text-muted" aria-label="Закрыть площадку">
+        <button type="button" onClick={onClose} className="-mt-1 -mr-1 flex size-10 shrink-0 items-center justify-center text-muted" aria-label={t("Закрыть площадку")}>
           <X className="size-5" />
         </button>
       </div>
       {gamesHere > 0 && (
         <p className="mt-2 text-sm font-semibold">
-          Здесь {gamesHere === 1 ? "уже есть игра" : `уже ${gamesHere} ${plural(gamesHere, ["игра", "игры", "игр"])}`}
+          Здесь {gamesHere === 1 ? t("уже есть игра") : `уже ${gamesHere} ${plural(gamesHere, ["игра", "игры", "игр"])}`}
         </p>
       )}
-      <Link href={venueCreateHref(venue, cityId)} className="btn-primary mt-3 w-full">
-        <Plus className="size-5" /> Собрать игру
+      {issues.length > 0 && (
+        <p className="mt-2 flex items-start gap-1.5 text-sm text-danger">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            {issues.map((i) => COURT_ISSUES[i.kind].label).join(", ")} · жители сообщили {issues.reduce((s, i) => s + i.votes, 0)} раз
+          </span>
+        </p>
+      )}
+      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+        <Link href={venueCreateHref(venue, cityId)} className="btn-primary">
+          <Plus className="size-5" /> Собрать игру
+        </Link>
+        <Link href={courtReportHref(venue, cityId)} className="btn-secondary px-3" aria-label={t("Сообщить о проблеме на площадке")}>
+          <CircleAlert className="size-5" /> Проблема
+        </Link>
+      </div>
+      <Link href={`/courts?city=${cityId}`} className="mt-2 block text-center text-sm text-muted underline-offset-2 hover:underline">
+        {t("Обращения жителей в акимат")}
       </Link>
     </section>
   );
 }
 
 function GameCard({ card: { lobby, km }, selected }: { card: Card; selected: boolean }) {
+  const t = useT();
   const sport = SPORTS[lobby.sport];
   const { free } = lobbySlots(lobby);
   const hasPin = lobby.lat != null && lobby.lng != null;
@@ -388,12 +449,15 @@ function GameCard({ card: { lobby, km }, selected }: { card: Card; selected: boo
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
-            <span className="truncate font-semibold">{sport?.label ?? "Игра"}</span>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate font-semibold">{t(sport?.label ?? "Игра")}</span>
+              {lobby.women_only && <WomenOnlyBadge />}
+            </span>
             {km != null && <span className="shrink-0 text-[13px] font-medium text-accent">{km < 1 ? `${Math.round(km * 1000)} м` : `${km.toFixed(1)} км`}</span>}
           </span>
           <span className="mt-0.5 flex items-center gap-1 text-sm text-muted">
             <Clock className="size-3.5 shrink-0" />
-            <span className="truncate">{formatDayTime(lobby.start_time)}</span>
+            <span className="truncate">{t.d(formatDayTime(lobby.start_time))}</span>
           </span>
           <span className="flex items-center gap-1 text-sm text-muted">
             {hasPin ? <MapPin className="size-3.5 shrink-0" /> : <MapPinOff className="size-3.5 shrink-0" />}
@@ -403,9 +467,9 @@ function GameCard({ card: { lobby, km }, selected }: { card: Card; selected: boo
       </span>
       <span className="mt-2 flex items-center justify-between text-sm font-semibold">
         <span className={free > 0 ? "text-ink" : "text-muted"}>
-          {free > 0 ? `${free} ${plural(free, ["место", "места", "мест"])}` : "Мест нет"}
+          {free > 0 ? `${free} ${plural(free, ["место", "места", "мест"])}` : t("Мест нет")}
         </span>
-        <span className="text-muted">{formatPrice(lobby.price_kzt).replace(" с человека", "")}</span>
+        <span className="text-muted">{t.d(formatPrice(lobby.price_kzt)).replace(" с человека", "")}</span>
       </span>
     </Link>
   );

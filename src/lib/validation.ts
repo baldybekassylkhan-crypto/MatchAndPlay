@@ -20,6 +20,7 @@ export const profileSchema = z.object({
   sports: z.array(z.enum(SPORT_IDS)).min(1, "Выберите хотя бы один вид спорта").max(SPORT_IDS.length),
   level: z.enum(["beginner", "amateur", "advanced"], { message: "Выберите уровень" }),
   avatar_url: z.url().nullable(),
+  gender: z.enum(["female", "male"]).nullable().optional(),
 });
 
 export type ProfileInput = z.infer<typeof profileSchema>;
@@ -40,6 +41,8 @@ export const lobbySchema = z
     lng: z.number().min(-180).max(180).nullable(),
     level: z.enum(["beginner", "amateur", "advanced"]).nullable(),
     price_kzt: z.number().int().min(0, "Не может быть меньше 0").max(100000, "Слишком большая сумма").nullable(),
+    is_outdoor: z.boolean().nullable().default(null),
+    women_only: z.boolean().default(false),
   })
   .superRefine((v, ctx) => {
     const now = Date.now();

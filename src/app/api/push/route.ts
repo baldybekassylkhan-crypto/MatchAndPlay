@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, {
           TTL: 60 * 60 * 6,
-          urgency: notification.type.startsWith("reminder") || notification.type.startsWith("application") ? "high" : "normal",
+          urgency: notification.type.startsWith("reminder") || notification.type === "weather_alert" || notification.type.startsWith("application") ? "high" : "normal",
         });
         sent++;
       } catch (e) {

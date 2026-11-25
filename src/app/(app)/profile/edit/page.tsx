@@ -1,6 +1,8 @@
+import { getT } from "@/lib/i18n/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { ProfileForm } from "@/components/ProfileForm";
 import { BlockedList, type BlockedUser } from "@/components/safety/BlockedList";
 import { DeleteAccount } from "@/components/safety/DeleteAccount";
@@ -10,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata = { title: "Редактировать профиль" };
 
 export default async function EditProfilePage() {
+  const t = await getT();
   const profile = await getMyProfile();
   if (!profile) redirect("/onboarding");
   const supabase = await createClient();
@@ -27,16 +30,20 @@ export default async function EditProfilePage() {
 
   return (
     <>
-      <PageHeader title="Редактировать профиль" back={`/u/${profile.username}`} />
+      <PageHeader title={t("Редактировать профиль")} back={`/u/${profile.username}`} />
       <div className="px-5 pt-6 pb-10">
+        <section className="mb-6">
+          <span className="label">{t("Язык интерфейса")} · Тіл</span>
+          <LanguageSwitch />
+        </section>
         <ProfileForm mode="edit" userId={profile.id} cities={cities} profile={profile} />
         <BlockedList users={blocked} />
         <form action="/auth/signout" method="post" className="mt-6">
-          <button className="btn-secondary w-full text-danger">Выйти из аккаунта</button>
+          <button className="btn-secondary w-full text-danger">{t("Выйти из аккаунта")}</button>
         </form>
         <DeleteAccount username={profile.username} />
         <Link href="/privacy" className="mt-2 block py-2 text-center text-sm text-muted underline">
-          Политика конфиденциальности
+          {t("Политика конфиденциальности")}
         </Link>
       </div>
     </>

@@ -27,6 +27,8 @@ export async function saveProfile(_prev: ProfileFormState, formData: FormData): 
     sports: formData.getAll("sports").map(text),
     level: text(formData.get("level")),
     avatar_url: text(formData.get("avatar_url")) || null,
+    // Поле есть только в форме профиля; при онбординге пол не трогаем
+    gender: formData.has("gender") ? text(formData.get("gender")) || null : undefined,
   });
 
   if (!parsed.success) {

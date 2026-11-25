@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -24,6 +25,7 @@ async function countUnread(userId: string) {
 }
 
 export default async function FeedPage() {
+  const t = await getT();
   const profile = await getMyProfile();
   if (!profile) redirect("/onboarding");
 
@@ -41,7 +43,7 @@ export default async function FeedPage() {
         title={<Logo className="text-xl" />}
         right={
           <div className="flex items-center">
-            <Link href="/create/post" className="flex size-10 items-center justify-center" aria-label="Новый пост">
+            <Link href="/create/post" className="flex size-10 items-center justify-center" aria-label={t("Новый пост")}>
               <Plus className="size-6" />
             </Link>
             <NotificationBell userId={profile.id} initialUnread={unread} />
@@ -50,7 +52,7 @@ export default async function FeedPage() {
       />
 
       {highlightAuthors.length > 0 && (
-        <nav aria-label="Хайлайты с игр" className="no-scrollbar flex gap-4 overflow-x-auto px-4 py-2">
+        <nav aria-label={t("Хайлайты с игр")} className="no-scrollbar flex gap-4 overflow-x-auto px-4 py-2">
           {highlightAuthors.map((a) => (
             <Link key={a.id} href={`/u/${a.username}?tab=highlights`} className="flex w-16 shrink-0 flex-col items-center gap-1">
               <span className="rounded-full bg-accent p-[2px]">
@@ -58,7 +60,7 @@ export default async function FeedPage() {
                   <Avatar src={a.avatar_url} name={a.username} size={56} />
                 </span>
               </span>
-              <span className="w-full truncate text-center text-xs">{a.id === profile.id ? "Вы" : a.username}</span>
+              <span className="w-full truncate text-center text-xs">{a.id === profile.id ? t("Вы") : a.username}</span>
             </Link>
           ))}
         </nav>

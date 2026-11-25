@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { KeyboardWatcher } from "@/components/KeyboardWatcher";
+import { I18nProvider } from "@/components/I18nProvider";
 import { MotionProvider } from "@/components/MotionProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { getLocale } from "@/lib/i18n/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,11 +26,14 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
   return (
-    <html lang="ru">
+    <html lang={locale}>
       <body className="font-sans antialiased">
-        <MotionProvider>{children}</MotionProvider>
+        <I18nProvider locale={locale}>
+          <MotionProvider>{children}</MotionProvider>
+        </I18nProvider>
         <ServiceWorkerRegister />
         <KeyboardWatcher />
       </body>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import { Clock, Flag, Heart, Loader2, MapPin, RotateCcw, Users, X } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
 import { useRouter } from "next/navigation";
@@ -23,6 +24,7 @@ export function SwipeDeck({
   items: { lobby: LobbyWithMeta; km: number | null }[];
   listHref: string;
 }) {
+  const t = useT();
   const router = useRouter();
   // Локально помним свайпнутые карточки: сервер может обновить выдачу в любой момент,
   // и колода не должна «прыгать» назад.
@@ -63,8 +65,8 @@ export function SwipeDeck({
     return (
       <div className="flex flex-col items-center gap-3 px-8 py-14 text-center">
         <div className="flex size-16 items-center justify-center rounded-full bg-surface-2"><Flag className="size-7 text-muted" /></div>
-        <h2 className="text-lg font-bold">Больше нет игр</h2>
-        <p className="text-muted">Вы посмотрели все подходящие игры. Измените фильтры выше или загляните позже.</p>
+        <h2 className="text-lg font-bold">{t("Больше нет игр")}</h2>
+        <p className="text-muted">{t("Вы посмотрели все подходящие игры. Измените фильтры выше или загляните позже.")}</p>
         <div className="mt-2 flex flex-wrap justify-center gap-2">
           <button
             className="btn-secondary"
@@ -78,10 +80,10 @@ export function SwipeDeck({
             }
           >
             {resetting ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
-            Показать пропущенные
+            {t("Показать пропущенные")}
           </button>
           <button className="btn-primary" onClick={() => router.push(listHref)}>
-            Списком
+            {t("Списком")}
           </button>
         </div>
       </div>
@@ -106,7 +108,7 @@ export function SwipeDeck({
         <button
           onClick={() => swipe("left")}
           className="glass flex size-14 items-center justify-center rounded-full transition active:scale-90"
-          aria-label="Не подходит"
+          aria-label={t("Не подходит")}
         >
           <X className="size-6 text-ink" strokeWidth={2} />
         </button>
@@ -114,12 +116,12 @@ export function SwipeDeck({
         <button
           onClick={() => swipe("right")}
           className="flex size-14 items-center justify-center rounded-full bg-accent text-accent-ink transition active:scale-90"
-          aria-label="Сохранить"
+          aria-label={t("Сохранить")}
         >
           <Heart className="size-6" strokeWidth={2} />
         </button>
       </div>
-      <p className="mt-3 text-center text-xs text-muted">Влево — не то, вправо — в сохранённые. Нажмите на карточку, чтобы открыть.</p>
+      <p className="mt-3 text-center text-xs text-muted">{t("Влево — не то, вправо — в сохранённые. Нажмите на карточку, чтобы открыть.")}</p>
 
       <AnimatePresence>
         {toast && (
@@ -155,6 +157,7 @@ function DraggableCard({
   onSwipe: (dir: Dir) => void;
   onOpen: () => void;
 }) {
+  const t = useT();
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-250, 250], [-14, 14]);
   const likeOpacity = useTransform(x, [30, 120], [0, 1]);
@@ -184,13 +187,13 @@ function DraggableCard({
           style={{ opacity: likeOpacity }}
           className="glass absolute top-5 left-5 rounded-full px-3.5 py-1.5 text-[15px] font-semibold text-accent"
         >
-          Сохранить
+          {t("Сохранить")}
         </motion.span>
         <motion.span
           style={{ opacity: nopeOpacity }}
           className="glass absolute top-5 right-5 rounded-full px-3.5 py-1.5 text-[15px] font-semibold text-ink"
         >
-          Пропустить
+          {t("Пропустить")}
         </motion.span>
       </CardFace>
     </motion.div>
@@ -206,6 +209,7 @@ function CardFace({
   background?: boolean;
   children?: React.ReactNode;
 }) {
+  const t = useT();
   const { lobby, km } = item;
   const sport = SPORTS[lobby.sport];
   const level = LEVELS.find((l) => l.id === lobby.level);
@@ -219,7 +223,7 @@ function CardFace({
       <div className="relative flex h-[38%] items-center justify-center bg-surface-2">
         <SportIcon sport={lobby.sport} className="size-20 text-muted" strokeWidth={1.2} />
         <span className="absolute bottom-3 left-4 glass rounded-full px-3 py-1 text-sm font-semibold text-ink">
-          {sport?.label}
+          {t(sport?.label)}
         </span>
         {km != null && (
           <span className="absolute right-4 bottom-3 glass rounded-full px-3 py-1 text-sm font-medium text-ink">
@@ -233,7 +237,7 @@ function CardFace({
         <div className="space-y-1 text-[15px]">
           <p className="flex items-center gap-2 font-semibold">
             <Clock className="size-4 shrink-0" />
-            {formatDayTime(lobby.start_time)}
+            {t.d(formatDayTime(lobby.start_time))}
           </p>
           <p className="flex items-center gap-2 text-muted">
             <MapPin className="size-4 shrink-0" />
@@ -241,7 +245,7 @@ function CardFace({
           </p>
           <p className="flex items-center gap-2 text-muted">
             <Users className="size-4 shrink-0" />
-            {level ? `Уровень: ${level.label.toLowerCase()}` : "Любой уровень"} · {formatPrice(lobby.price_kzt).replace(" с человека", "")}
+            {level ? `Уровень: ${level.label.toLowerCase()}` : t("Любой уровень")} · {t.d(formatPrice(lobby.price_kzt)).replace(" с человека", "")}
           </p>
         </div>
         <p className="line-clamp-3 text-[15px]">{lobby.description}</p>

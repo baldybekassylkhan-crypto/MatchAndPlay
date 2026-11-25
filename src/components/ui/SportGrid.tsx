@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import clsx from "clsx";
 import { Check } from "lucide-react";
 import { SportIcon } from "@/components/ui/SportIcon";
@@ -18,8 +19,9 @@ export function SportGrid({
   animateIn?: boolean;
   ariaLabel?: string;
 }) {
+  const t = useT();
   return (
-    <div role="group" aria-label={ariaLabel} className="grid w-full grid-cols-3 gap-2 sm:grid-cols-4">
+    <div role="group" aria-label={t(ariaLabel)} className="grid w-full grid-cols-3 gap-2 sm:grid-cols-4">
       {SPORT_IDS.map((id) => {
         const on = selected.includes(id);
         return (
@@ -27,7 +29,7 @@ export function SportGrid({
             key={id}
             type="button"
             aria-pressed={on}
-            title={SPORTS[id].label}
+            title={t(SPORTS[id].label)}
             onClick={() => onToggle(id)}
             className={clsx(
               "relative flex h-[78px] flex-col items-center justify-center gap-1.5 rounded-2xl px-1 text-center active:opacity-60",
@@ -35,7 +37,7 @@ export function SportGrid({
             )}
           >
             <SportIcon sport={id} className="size-6" />
-            <span className="w-full truncate text-xs font-medium">{SHORT[id] ?? SPORTS[id].label}</span>
+            <span className="w-full truncate text-xs font-medium">{t(SHORT[id] ?? SPORTS[id].label)}</span>
             {on && (
               <span className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-accent text-accent-ink" aria-hidden>
                 <Check className="size-3" strokeWidth={3} />

@@ -25,6 +25,7 @@ export default async function CreateLobbyPage({
           defaultCityId={venue?.cityId ?? profile.city_id}
           defaultSport={venue?.sport ?? profile.sports[0]}
           venue={venue}
+          canWomenOnly={profile.gender === "female"}
         />
       </div>
     </>

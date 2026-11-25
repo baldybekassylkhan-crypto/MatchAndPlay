@@ -6,11 +6,13 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useT } from "@/components/I18nProvider";
 import { SWITCH_SPRING } from "@/components/ui/Segmented";
 import { createClient } from "@/lib/supabase/client";
 
 export function BottomNav({ username }: { username: string }) {
   const pathname = usePathname();
+  const t = useT();
   const myProfile = `/u/${username}`;
   const [pending, setPending] = useState<string | null>(null);
   const [unreadChats, setUnreadChats] = useState(0);
@@ -49,24 +51,24 @@ export function BottomNav({ username }: { username: string }) {
   }, [refreshUnread]);
 
   const items = [
-    { href: "/", label: "Главная", icon: House, active: pathname === "/" },
-    { href: "/search", label: "Поиск", icon: Compass, active: pathname.startsWith("/search") },
+    { href: "/", label: t("Главная"), icon: House, active: pathname === "/" },
+    { href: "/search", label: t("Поиск"), icon: Compass, active: pathname.startsWith("/search") },
     {
       href: "/crews",
-      label: "Общение",
+      label: t("Общение"),
       icon: Users,
       active: ["/crews", "/messages"].some((p) => pathname.startsWith(p)),
       badge: unreadChats > 0,
     },
     {
       href: "/games",
-      label: "Игры",
+      label: t("Игры"),
       icon: CalendarCheck,
       active: ["/games", "/tournaments", "/admin"].some((p) => pathname.startsWith(p)),
     },
     {
       href: myProfile,
-      label: "Профиль",
+      label: t("Профиль"),
       icon: User,
       active: pathname === myProfile || pathname.startsWith(`${myProfile}/`) || pathname.startsWith("/profile"),
     },
@@ -76,7 +78,7 @@ export function BottomNav({ username }: { username: string }) {
   return (
     <nav
       data-bottom-nav
-      aria-label="Основное меню"
+      aria-label={t("Основное меню")}
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition-transform duration-200"
     >
       <div className="pointer-events-auto mx-auto flex max-w-[30rem] items-center gap-2">
@@ -87,7 +89,7 @@ export function BottomNav({ username }: { username: string }) {
               <li key={href} className="relative min-w-0">
                 <Link
                   href={href}
-                  aria-label={badge ? `${label}, есть непрочитанные сообщения` : label}
+                  aria-label={badge ? `${label}, ${t("есть непрочитанные сообщения")}` : label}
                   aria-current={active ? "page" : undefined}
                   onClick={() => setPending(href)}
                   className={clsx(
@@ -120,7 +122,7 @@ export function BottomNav({ username }: { username: string }) {
         </ul>
         <Link
           href="/create"
-          aria-label="Создать"
+          aria-label={t("Создать")}
           aria-current={createActive ? "page" : undefined}
           onClick={() => setPending("/create")}
           className={clsx("liquid-glass flex size-[62px] shrink-0 items-center justify-center rounded-full active:scale-90", createActive ? "text-accent" : "text-ink")}

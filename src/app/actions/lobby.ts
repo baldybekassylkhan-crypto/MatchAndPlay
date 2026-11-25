@@ -20,6 +20,8 @@ export interface ActionResult {
 /** Коды ошибок из SQL-функций → понятный текст. */
 const DB_ERRORS: Record<string, string> = {
   not_authenticated: "Войдите в аккаунт",
+  women_only_organizer: "Игры «только для девушек» может создавать организатор, у которого в профиле указан женский пол",
+  women_only: "Эта игра только для девушек. Если это вы — укажите пол в профиле",
   lobby_not_found: "Игра не найдена",
   own_lobby: "Это ваша игра",
   lobby_cancelled: "Игра отменена организатором",
@@ -55,6 +57,7 @@ const numOrNull = (v: FormDataEntryValue | null) => {
 function parseLobbyForm(formData: FormData) {
   const start = fromKzInputs(text(formData.get("date")), text(formData.get("time")));
   const level = text(formData.get("level"));
+  const outdoor = text(formData.get("is_outdoor"));
   return lobbySchema.safeParse({
     sport: text(formData.get("sport")),
     description: text(formData.get("description")),
@@ -68,6 +71,8 @@ function parseLobbyForm(formData: FormData) {
     lng: numOrNull(formData.get("lng")),
     level: level === "" ? null : level,
     price_kzt: numOrNull(formData.get("price_kzt")),
+    is_outdoor: outdoor === "1" ? true : outdoor === "0" ? false : null,
+    women_only: text(formData.get("women_only")) === "1",
   });
 }
 

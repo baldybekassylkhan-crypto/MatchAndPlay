@@ -1,7 +1,9 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import clsx from "clsx";
-import { Loader2, MapPin, X } from "lucide-react";
+import { Building2, Loader2, MapPin, Sun, Venus, X } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { saveLobby, type LobbyFormState } from "@/app/actions/lobby";
 import { CityPicker } from "@/components/CityPicker";
@@ -35,7 +37,10 @@ export function LobbyForm({
   defaultSport,
   lobby,
   venue,
+  canWomenOnly = false,
 }: {
+  /** У организатора в профиле указан женский пол */
+  canWomenOnly?: boolean;
   cities: City[];
   defaultCityId: number;
   defaultSport?: SportId;
@@ -43,6 +48,7 @@ export function LobbyForm({
   /** Игра собирается с площадки на карте: место и точка уже заполнены */
   venue?: VenuePrefill | null;
 }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState(saveLobby, initialState);
   const start = useMemo(() => (lobby ? toKzInputs(lobby.start_time) : defaultStart()), [lobby]);
 
@@ -57,6 +63,9 @@ export function LobbyForm({
     lobby?.lat != null && lobby?.lng != null ? { lat: lobby.lat, lng: lobby.lng } : venue ? { lat: venue.lat, lng: venue.lng } : null,
   );
   const [level, setLevel] = useState<SkillLevel | null>(lobby?.level ?? null);
+  // Где играем: для игр на улице за 3 часа приходит предупреждение о плохой погоде
+  const [womenOnly, setWomenOnly] = useState(lobby?.women_only ?? false);
+  const [outdoor, setOutdoor] = useState<boolean | null>(lobby?.is_outdoor ?? null);
   const address = useMapAddress(lobby?.location_name ?? venue?.place ?? "");
   const f = state.fields ?? {};
   const pickPoint = (p: LatLng) => {
@@ -78,6 +87,8 @@ export function LobbyForm({
       <input type="hidden" name="sport" value={sport ?? ""} />
       <input type="hidden" name="duration_min" value={duration} />
       <input type="hidden" name="level" value={level ?? ""} />
+      <input type="hidden" name="women_only" value={womenOnly ? "1" : ""} />
+      <input type="hidden" name="is_outdoor" value={outdoor === null ? "" : outdoor ? "1" : "0"} />
       <input type="hidden" name="lat" value={point?.lat ?? ""} />
       <input type="hidden" name="lng" value={point?.lng ?? ""} />
 
@@ -91,21 +102,21 @@ export function LobbyForm({
       )}
 
       <div>
-        <span className="label">Вид спорта</span>
-        <SportGrid selected={sport ? [sport] : []} onToggle={setSport} ariaLabel="Вид спорта" />
+        <span className="label">{t("Вид спорта")}</span>
+        <SportGrid selected={sport ? [sport] : []} onToggle={setSport} ariaLabel={t("Вид спорта")} />
         <FieldError message={f.sport} />
       </div>
 
       <div>
         <label className="label" htmlFor="description">
-          Описание
+          {t("Описание")}
         </label>
         <textarea
           id="description"
           name="description"
           className="input h-24 resize-none py-3"
           defaultValue={lobby?.description ?? ""}
-          placeholder="Нас 4, нужны ещё 2. Играем дружески, мяч есть."
+          placeholder={t("Нас 4, нужны ещё 2. Играем дружески, мяч есть.")}
           maxLength={300}
           required
         />
@@ -114,12 +125,12 @@ export function LobbyForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <span className="label">Нас уже</span>
+          <span className="label">{t("Нас уже")}</span>
           <Stepper name="players_current" value={playersCurrent} onChange={setPlayersCurrent} min={1} max={50} />
           <FieldError message={f.players_current} />
         </div>
         <div>
-          <span className="label">Нужно ещё</span>
+          <span className="label">{t("Нужно ещё")}</span>
           <Stepper
             name="players_needed"
             value={playersNeeded}
@@ -135,23 +146,23 @@ export function LobbyForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label" htmlFor="date">
-              Дата
+              {t("Дата")}
             </label>
             <DateTimeInput id="date" name="date" type="date" defaultValue={start.date} required />
           </div>
           <div>
             <label className="label" htmlFor="time">
-              Начало
+              {t("Начало")}
             </label>
             <DateTimeInput id="time" name="time" type="time" step={300} defaultValue={start.time} required />
           </div>
         </div>
-        <p className="mt-1.5 text-xs text-muted">Время Казахстана (UTC+5)</p>
+        <p className="mt-1.5 text-xs text-muted">{t("Время Казахстана (UTC+5)")}</p>
         <FieldError message={f.start_time} />
       </div>
 
       <div>
-        <span className="label">Город</span>
+        <span className="label">{t("Город")}</span>
         <CityPicker
           cities={cities}
           value={cityId}
@@ -165,7 +176,7 @@ export function LobbyForm({
 
       <div>
         <label className="label" htmlFor="location_name">
-          Площадка или адрес
+          {t("Площадка или адрес")}
         </label>
         <input
           id="location_name"
@@ -173,7 +184,7 @@ export function LobbyForm({
           className="input"
           value={address.place}
           onChange={(e) => address.typePlace(e.target.value)}
-          placeholder={address.loading ? "Определяем адрес…" : "Стадион «Динамо», поле №2"}
+          placeholder={address.loading ? t("Определяем адрес…") : t("Стадион «Динамо», поле №2")}
           maxLength={120}
           required
         />
@@ -184,7 +195,7 @@ export function LobbyForm({
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-sm font-medium text-muted">
             <MapPin className="mr-1 inline size-3.5" />
-            {point ? "Точка на карте выбрана" : "Нажмите на карту, чтобы отметить место"}
+            {point ? t("Точка на карте выбрана") : t("Нажмите на карту, чтобы отметить место")}
           </span>
           {point && (
             <button type="button" onClick={removePoint} className="flex items-center gap-1 text-sm text-muted">
@@ -198,8 +209,56 @@ export function LobbyForm({
       </div>
 
       <div>
+        <span className="label">{t("Где играем")}</span>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { value: true, label: "На улице", icon: Sun },
+            { value: false, label: "В зале", icon: Building2 },
+          ].map((o) => (
+            <button
+              key={o.label}
+              type="button"
+              aria-pressed={outdoor === o.value}
+              onClick={() => setOutdoor(outdoor === o.value ? null : o.value)}
+              className={clsx("chip justify-center gap-1.5", outdoor === o.value && "chip-active")}
+            >
+              <o.icon className="size-4" aria-hidden /> {o.label}
+            </button>
+          ))}
+        </div>
+        {outdoor && <p className="mt-1.5 text-sm text-muted">{t("За 3 часа до начала предупредим игроков, если ожидается дождь, снег или сильный ветер.")}</p>}
+      </div>
+
+      <div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={womenOnly}
+          disabled={!canWomenOnly && !womenOnly}
+          onClick={() => setWomenOnly((v) => !v)}
+          className="card flex w-full items-center gap-3 p-3.5 text-left disabled:opacity-60"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#ff2d92]/15 text-[#ff2d92]" aria-hidden>
+            <Venus className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">{t("Только для девушек")}</span>
+            <span className="block text-sm text-muted">{t("Вступить смогут только девушки")}</span>
+          </span>
+          <span className={clsx("relative h-7 w-12 shrink-0 rounded-full transition", womenOnly ? "bg-[#ff2d92]" : "bg-surface-2")} aria-hidden>
+            <span className={clsx("absolute top-0.5 size-6 rounded-full bg-white shadow transition-all", womenOnly ? "left-[22px]" : "left-0.5")} />
+          </span>
+        </button>
+        {!canWomenOnly && !womenOnly && (
+          <p className="mt-1.5 text-sm text-muted">
+            Доступно, если в <Link href="/profile/edit" className="underline">{t("профиле")}</Link> указан женский пол.
+          </p>
+        )}
+      </div>
+
+      <div>
         <span className="label">
-          Уровень игроков <span className="font-normal">(необязательно)</span>
+          Уровень игроков <span className="font-normal">{t("(необязательно)")}</span>
         </span>
         <div className="grid grid-cols-3 gap-2">
           {LEVELS.map((l) => (
@@ -210,7 +269,7 @@ export function LobbyForm({
               onClick={() => setLevel(level === l.id ? null : l.id)}
               className={clsx("chip min-w-0 justify-center truncate px-1.5! text-[14px]!", level === l.id && "chip-active")}
             >
-              {l.label}
+              {t(l.label)}
             </button>
           ))}
         </div>
@@ -218,7 +277,7 @@ export function LobbyForm({
 
       <div>
         <label className="label" htmlFor="price_kzt">
-          Стоимость с человека, ₸ <span className="font-normal">(необязательно)</span>
+          Стоимость с человека, ₸ <span className="font-normal">{t("(необязательно)")}</span>
         </label>
         <input
           id="price_kzt"
@@ -227,7 +286,7 @@ export function LobbyForm({
           pattern="[0-9 ]*"
           className="input"
           defaultValue={lobby?.price_kzt ?? ""}
-          placeholder="Например, 2000 за аренду поля"
+          placeholder={t("Например, 2000 за аренду поля")}
         />
         <FieldError message={f.price_kzt} />
       </div>
@@ -236,7 +295,7 @@ export function LobbyForm({
 
       <button className="btn-primary w-full" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
-        {lobby ? "Сохранить изменения" : "Опубликовать игру"}
+        {lobby ? t("Сохранить изменения") : t("Опубликовать игру")}
       </button>
     </form>
   );

@@ -1,4 +1,5 @@
-import { BadgeCheck, MapPin, Settings } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
+import { BadgeCheck, ChevronRight, Gift, MapPin, Settings } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
@@ -11,6 +12,7 @@ import { getUser } from "@/lib/auth";
 import { getProfilePosts } from "@/lib/posts";
 import { getFollowCounts, getProfileByUsername, isFollowing } from "@/lib/profiles";
 import { SPORTS } from "@/lib/sports";
+import { getMyRewards, nextReward } from "@/lib/rewards";
 import { createClient } from "@/lib/supabase/server";
 import { LEVELS } from "@/lib/types";
 import { SportIcon } from "@/components/ui/SportIcon";
@@ -29,6 +31,7 @@ export default async function ProfilePage({
   params: Params;
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const t = await getT();
   const { username } = await params;
   const { tab } = await searchParams;
   const [profile, me] = await Promise.all([getProfileByUsername(username), getUser()]);
@@ -49,6 +52,7 @@ export default async function ProfilePage({
     me && !isMe ? supabase.rpc("can_message_user", { p_user_id: profile.id }) : Promise.resolve({ data: false }),
   ]);
   const verifiedGames = (verified.data as number | null) ?? 0;
+  const next = isMe ? nextReward(await getMyRewards()) : undefined;
   const blocked = Boolean(blockRow.data);
   const level = LEVELS.find((l) => l.id === profile.level);
 
@@ -58,7 +62,7 @@ export default async function ProfilePage({
         title={`@${profile.username}`}
         right={
           isMe ? (
-            <Link href="/profile/edit" className="flex size-10 items-center justify-center" aria-label="Настройки">
+            <Link href="/profile/edit" className="flex size-10 items-center justify-center" aria-label={t("Настройки")}>
               <Settings className="size-5" />
             </Link>
           ) : (
@@ -71,9 +75,9 @@ export default async function ProfilePage({
         <div className="flex items-center gap-5">
           <Avatar src={profile.avatar_url} name={profile.username} size={84} />
           <dl className="grid flex-1 grid-cols-3 text-center">
-            <Stat label="игр" value={profile.games_played} />
-            <Stat label="подписчики" value={counts.followers} href={`/u/${profile.username}/followers`} />
-            <Stat label="подписки" value={counts.following} href={`/u/${profile.username}/following`} />
+            <Stat label={t("игр")} value={profile.games_played} />
+            <Stat label={t("подписчики")} value={counts.followers} href={`/u/${profile.username}/followers`} />
+            <Stat label={t("подписки")} value={counts.following} href={`/u/${profile.username}/following`} />
           </dl>
         </div>
 
@@ -82,12 +86,12 @@ export default async function ProfilePage({
           <p className="flex items-center gap-1 text-sm text-muted">
             <MapPin className="size-3.5" />
             {profile.city?.name_ru ?? "Казахстан"}
-            {level && <span>· {level.label}</span>}
+            {level && <span>· {t(level.label)}</span>}
           </p>
           {verifiedGames > 0 && (
             <p className="flex items-center gap-1 text-sm font-semibold">
               <BadgeCheck className="size-4 text-accent" />
-              Подтверждено игр по QR: {verifiedGames}
+              Подтверждённых игр: {verifiedGames}
             </p>
           )}
           {profile.bio && <p className="whitespace-pre-line">{profile.bio}</p>}
@@ -106,10 +110,10 @@ export default async function ProfilePage({
         <div className="mt-4 flex gap-2">
           {isMe ? (
             <Link href="/profile/edit" className="btn-secondary h-10 flex-1 text-sm">
-              Редактировать профиль
+              {t("Редактировать профиль")}
             </Link>
           ) : blocked ? (
-            <p className="w-full rounded-xl bg-surface-2 px-4 py-2.5 text-center text-sm text-muted">Вы заблокировали этого игрока</p>
+            <p className="w-full rounded-xl bg-surface-2 px-4 py-2.5 text-center text-sm text-muted">{t("Вы заблокировали этого игрока")}</p>
           ) : (
             <>
               <FollowButton targetId={profile.id} initialFollowing={following} />
@@ -118,6 +122,21 @@ export default async function ProfilePage({
           )}
         </div>
       </section>
+
+      {isMe && next !== undefined && (
+        <Link href="/rewards" className="card mx-5 mt-4 flex items-center gap-3 p-3.5 active:bg-surface-2">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent" aria-hidden>
+            <Gift className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">{t("Награды за игры")}</span>
+            <span className="block truncate text-sm text-muted">
+              {next ? `${next.sponsor_name}: ещё ${next.games_required - next.progress} до «${next.title}»` : t("Скидки и подарки от партнёров")}
+            </span>
+          </span>
+          <ChevronRight className="size-5 shrink-0 text-muted/60" aria-hidden />
+        </Link>
+      )}
 
       <ProfilePostsTabs posts={posts} isMe={isMe} initialTab={activeTab} />
     </>

@@ -12,6 +12,10 @@ delete from public.notifications n
     or n.payload->>'lobby_id' in (select id::text from public.lobbies where organizer_id::text like 'd0000000-%')
     or n.payload->>'post_id' in (select id::text from public.posts where author_id::text like 'd0000000-%');
 
+-- Демо-обращения о площадках и вымышленные партнёры с наградами
+delete from public.court_reports where id::text like 'd0000000-0000-4000-8009-%';
+delete from public.sponsors where id::text like 'd0000000-0000-4000-8008-%';
+
 -- Демо-аккаунты (всё остальное удалится каскадом)
 delete from auth.users where email like '%@demo.matchandplay.kz';
 

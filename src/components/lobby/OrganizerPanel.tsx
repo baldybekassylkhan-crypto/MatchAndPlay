@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import { Check, Loader2, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -18,6 +19,7 @@ export function OrganizerPanel({
   full: boolean;
   pendingApps: ApplicationWithUser[];
 }) {
+  const t = useT();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -49,7 +51,7 @@ export function OrganizerPanel({
           </h2>
           {pendingApps.length === 0 ? (
             <p className="rounded-2xl bg-surface-2 p-4 text-sm text-muted">
-              Новых заявок пока нет. Как только кто-то захочет сыграть, заявка появится здесь.
+              {t("Новых заявок пока нет. Как только кто-то захочет сыграть, заявка появится здесь.")}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -67,7 +69,7 @@ export function OrganizerPanel({
                       onClick={() => decide(app.id, false)}
                       disabled={pending}
                       className="flex size-10 items-center justify-center rounded-xl border border-line"
-                      aria-label="Отклонить"
+                      aria-label={t("Отклонить")}
                     >
                       {busyId === app.id ? <Loader2 className="size-4 animate-spin" /> : <X className="size-5" />}
                     </button>
@@ -75,7 +77,7 @@ export function OrganizerPanel({
                       onClick={() => decide(app.id, true)}
                       disabled={pending || full}
                       className="flex size-10 items-center justify-center rounded-xl bg-accent text-accent-ink disabled:opacity-40"
-                      aria-label="Принять"
+                      aria-label={t("Принять")}
                     >
                       <Check className="size-5" />
                     </button>
@@ -86,7 +88,7 @@ export function OrganizerPanel({
             </ul>
           )}
           {full && pendingApps.length > 0 && (
-            <p className="mt-2 text-sm text-muted">Все места заняты. Увеличьте число игроков, чтобы принять ещё.</p>
+            <p className="mt-2 text-sm text-muted">{t("Все места заняты. Увеличьте число игроков, чтобы принять ещё.")}</p>
           )}
         </div>
       )}
@@ -100,20 +102,20 @@ export function OrganizerPanel({
           </Link>
           {!confirmCancel && (
             <button className="btn-secondary flex-1 text-danger" onClick={() => setConfirmCancel(true)}>
-              Отменить игру
+              {t("Отменить игру")}
             </button>
           )}
         </div>
       )}
       {confirmCancel && (
         <div className="animate-fade-up space-y-2 rounded-2xl border border-line p-4">
-          <p className="text-sm">Отменить игру? Все участники увидят, что она не состоится. Это действие нельзя вернуть.</p>
+          <p className="text-sm">{t("Отменить игру? Все участники увидят, что она не состоится. Это действие нельзя вернуть.")}</p>
           <div className="flex gap-2">
             <button className="btn flex-1 bg-danger text-white" disabled={pending} onClick={cancel}>
               {pending && <Loader2 className="size-4 animate-spin" />} Да, отменить
             </button>
             <button className="btn-secondary flex-1" onClick={() => setConfirmCancel(false)}>
-              Нет
+              {t("Нет")}
             </button>
           </div>
         </div>

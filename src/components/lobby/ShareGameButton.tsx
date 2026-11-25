@@ -1,9 +1,11 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import { Check, Share2 } from "lucide-react";
 import { useState } from "react";
 
 export function ShareGameButton({ lobbyId, text }: { lobbyId: string; text: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   async function share() {
@@ -24,7 +26,7 @@ export function ShareGameButton({ lobbyId, text }: { lobbyId: string; text: stri
   return (
     <button type="button" onClick={share} className="btn-secondary w-full">
       {copied ? <Check className="size-5" /> : <Share2 className="size-5" />}
-      {copied ? "Ссылка скопирована" : "Позвать друзей"}
+      {copied ? t("Ссылка скопирована") : t("Позвать друзей")}
     </button>
   );
 }

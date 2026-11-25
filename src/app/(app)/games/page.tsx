@@ -1,3 +1,4 @@
+import { getT } from "@/lib/i18n/server";
 import { CalendarCheck, Camera, Heart, History, Inbox, Trophy } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -29,6 +30,7 @@ const APP_BADGE: Record<ApplicationStatus, { tone: "accent" | "muted" | "danger"
 };
 
 export default async function GamesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const t = await getT();
   // Нужен только id — берём из токена, не дожидаясь загрузки профиля (его проверяет layout)
   const profile = await getUser();
   if (!profile) redirect("/onboarding");
@@ -38,7 +40,7 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader
-        title="Мои игры"
+        title={t("Мои игры")}
         right={
           <Link href="/tournaments" className="chip h-9 text-[14px]!">
             <Trophy className="size-4" aria-hidden /> Турниры
@@ -48,7 +50,7 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
       <div className="no-scrollbar sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 overflow-x-auto glass-bar px-4 py-2">
         <TabLinks
           layoutId="games-tab"
-          items={TABS.map((t) => ({ href: `/games?tab=${t.id}`, label: t.label, active: tab === t.id }))}
+          items={TABS.map((x) => ({ href: `/games?tab=${x.id}`, label: t(x.label), active: tab === x.id }))}
         />
       </div>
       <div key={tab} className="animate-fade-up space-y-3 px-4 pt-4 pb-8">
@@ -62,14 +64,15 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
 }
 
 async function Saved({ userId }: { userId: string }) {
+  const t = await getT();
   const lobbies = await getSavedLobbies(userId);
   if (lobbies.length === 0) {
     return (
       <EmptyState
         icon={Heart}
-        title="Сохранённых игр нет"
-        text="Свайпните карточку вправо или нажмите на сердце на странице игры. Когда игра начнётся, отменится или заполнится, она исчезнет отсюда сама."
-        action={{ href: "/search?mode=swipe", label: "Листать игры" }}
+        title={t("Сохранённых игр нет")}
+        text={t("Свайпните карточку вправо или нажмите на сердце на странице игры. Когда игра начнётся, отменится или заполнится, она исчезнет отсюда сама.")}
+        action={{ href: "/search?mode=swipe", label: t("Листать игры") }}
       />
     );
   }
@@ -82,14 +85,15 @@ async function Saved({ userId }: { userId: string }) {
 }
 
 async function Applications({ userId }: { userId: string }) {
+  const t = await getT();
   const apps = await getMyApplications(userId);
   if (apps.length === 0) {
     return (
       <EmptyState
         icon={Inbox}
-        title="Заявок пока нет"
-        text="Найдите игру и нажмите «Хочу играть» — заявка появится здесь."
-        action={{ href: "/search", label: "Найти игру" }}
+        title={t("Заявок пока нет")}
+        text={t("Найдите игру и нажмите «Хочу играть» — заявка появится здесь.")}
+        action={{ href: "/search", label: t("Найти игру") }}
       />
     );
   }
@@ -97,23 +101,24 @@ async function Applications({ userId }: { userId: string }) {
     if (!a.lobby) return null;
     const badge =
       a.lobby.status === "cancelled"
-        ? { tone: "danger" as const, label: "Игра отменена" }
+        ? { tone: "danger" as const, label: t("Игра отменена") }
         : hasStarted(a.lobby.start_time)
-          ? { tone: "muted" as const, label: "Началась" }
+          ? { tone: "muted" as const, label: t("Началась") }
           : APP_BADGE[a.status];
-    return <LobbyCard key={a.id} lobby={a.lobby} badge={<StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>} />;
+    return <LobbyCard key={a.id} lobby={a.lobby} badge={<StatusBadge tone={badge.tone}>{t(badge.label)}</StatusBadge>} />;
   });
 }
 
 async function Hosting({ userId }: { userId: string }) {
+  const t = await getT();
   const lobbies = await getMyLobbies(userId);
   if (lobbies.length === 0) {
     return (
       <EmptyState
         icon={CalendarCheck}
-        title="Вы ещё не создавали игр"
-        text="Соберите команду: укажите время, место и сколько игроков нужно."
-        action={{ href: "/create/lobby", label: "Создать игру" }}
+        title={t("Вы ещё не создавали игр")}
+        text={t("Соберите команду: укажите время, место и сколько игроков нужно.")}
+        action={{ href: "/create/lobby", label: t("Создать игру") }}
       />
     );
   }
@@ -123,13 +128,13 @@ async function Hosting({ userId }: { userId: string }) {
       lobby={l}
       badge={
         l.status === "cancelled" ? (
-          <StatusBadge tone="danger">Отменена</StatusBadge>
+          <StatusBadge tone="danger">{t("Отменена")}</StatusBadge>
         ) : l.pendingCount > 0 ? (
           <StatusBadge tone="accent">
             {l.pendingCount} {plural(l.pendingCount, ["заявка", "заявки", "заявок"])}
           </StatusBadge>
         ) : l.status === "full" ? (
-          <StatusBadge tone="ink">Собрана</StatusBadge>
+          <StatusBadge tone="ink">{t("Собрана")}</StatusBadge>
         ) : null
       }
     />
@@ -137,13 +142,14 @@ async function Hosting({ userId }: { userId: string }) {
 }
 
 async function HistoryList({ userId }: { userId: string }) {
+  const t = await getT();
   const games = await getGameHistory(userId);
   if (games.length === 0) {
     return (
       <EmptyState
         icon={History}
-        title="Сыгранных игр пока нет"
-        text="После каждой игры она появится здесь, а счётчик в профиле вырастет."
+        title={t("Сыгранных игр пока нет")}
+        text={t("После каждой игры она появится здесь, а счётчик в профиле вырастет.")}
       />
     );
   }

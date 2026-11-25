@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import { Loader2, LocateOff, Search } from "lucide-react";
 import Link from "next/link";
 import { LobbyCard, StatusBadge } from "@/components/lobby/LobbyCard";
@@ -33,6 +34,7 @@ export function SearchResults({
   listHref: string;
   hasFilters: boolean;
 }) {
+  const t = useT();
   const { items, geo } = useDistanceFilter(lobbies, filters.dist);
   const { items: similarItems } = useDistanceFilter(similar, filters.dist);
 
@@ -48,7 +50,7 @@ export function SearchResults({
     geo === "denied" ? (
       <p className="mx-4 mt-2 flex items-center gap-2 rounded-2xl bg-surface-2 p-3 text-sm text-muted">
         <LocateOff className="size-4 shrink-0" />
-        Нет доступа к геолокации — показываем игры по всему городу.
+        {t("Нет доступа к геолокации — показываем игры по всему городу.")}
       </p>
     ) : null;
 
@@ -63,11 +65,11 @@ export function SearchResults({
 
   const badge = ({ lobby, km }: Item) =>
     lobby.organizer_id === myId ? (
-      <StatusBadge tone="ink">Ваша</StatusBadge>
+      <StatusBadge tone="ink">{t("Ваша")}</StatusBadge>
     ) : lobby.status === "full" ? (
-      <StatusBadge tone="muted">Мест нет</StatusBadge>
+      <StatusBadge tone="muted">{t("Мест нет")}</StatusBadge>
     ) : km != null ? (
-      <StatusBadge tone="muted">{km < 1 ? "< 1 км" : `${Math.round(km)} км`}</StatusBadge>
+      <StatusBadge tone="muted">{km < 1 ? t("< 1 км") : `${Math.round(km)} км`}</StatusBadge>
     ) : null;
 
   const card = (it: Item) => (
@@ -87,14 +89,14 @@ export function SearchResults({
           <div className="flex size-16 items-center justify-center rounded-3xl bg-surface-2">
             <Search className="size-7 text-muted" />
           </div>
-          <h2 className="text-lg font-bold">{hasFilters ? "Ничего не нашлось" : "Игр пока нет"}</h2>
+          <h2 className="text-lg font-bold">{hasFilters ? t("Ничего не нашлось") : t("Игр пока нет")}</h2>
           <p className="text-muted">
             {hasFilters
-              ? "Попробуйте другой день, вид спорта или уберите часть условий выше."
-              : "В этом городе пока никто не ищет игроков. Создайте свою игру — и к вам присоединятся!"}
+              ? t("Попробуйте другой день, вид спорта или уберите часть условий выше.")
+              : t("В этом городе пока никто не ищет игроков. Создайте свою игру — и к вам присоединятся!")}
           </p>
           <Link href="/create/lobby" className="btn-primary mt-2">
-            Создать игру
+            {t("Создать игру")}
           </Link>
         </div>
       </>
@@ -112,14 +114,14 @@ export function SearchResults({
             </h2>
           ) : (
             <p className="rounded-2xl bg-surface-2 p-4 text-sm">
-              Точных совпадений нет, но есть похожие варианты
+              {t("Точных совпадений нет, но есть похожие варианты")}
             </p>
           )}
           {items.map(card)}
           {similarItems.length > 0 && (
             <>
-              <h2 className="px-1 pt-4 text-sm font-bold tracking-wide text-muted uppercase">Похожие варианты</h2>
-              <p className="-mt-1 px-1 text-sm text-muted">Соседние дни и часы, другое число игроков</p>
+              <h2 className="px-1 pt-4 text-sm font-bold tracking-wide text-muted uppercase">{t("Похожие варианты")}</h2>
+              <p className="-mt-1 px-1 text-sm text-muted">{t("Соседние дни и часы, другое число игроков")}</p>
               {similarItems.map(card)}
             </>
           )}
@@ -130,7 +132,7 @@ export function SearchResults({
 
   const groups = new Map<string, Item[]>();
   for (const it of items) {
-    const key = formatDay(it.lobby.start_time);
+    const key = t.d(formatDay(it.lobby.start_time));
     groups.set(key, [...(groups.get(key) ?? []), it]);
   }
 

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<defs>
+<radialGradient id="vig" cx="50%" cy="45%" r="75%"><stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.45"/></radialGradient>
+<filter id="sh" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-opacity="0.35"/></filter>
+</defs>
+<rect width="1080" height="1350" fill="#3c8d4a"/><rect x="120" y="100" width="840" height="1150" rx="420" fill="#2f6fb3"/>
+<rect x="348" y="328" width="384" height="694" rx="192" fill="#3c8d4a"/><rect x="140" y="120" width="800" height="1110" rx="400" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/><rect x="178" y="158" width="724" height="1034" rx="362" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/><rect x="216" y="196" width="648" height="958" rx="324" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/><rect x="254" y="234" width="572" height="882" rx="286" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/><rect x="292" y="272" width="496" height="806" rx="248" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/><rect x="330" y="310" width="420" height="730" rx="210" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/>
+<line x1="140" y1="675" x2="348" y2="675" stroke="#fff" stroke-width="10"/>
+<g filter="url(#sh)"><circle cx="210" cy="624" r="16" fill="#ffffff"/><circle cx="210" cy="624" r="7.2" fill="#000" opacity="0.25"/></g><g filter="url(#sh)"><circle cx="184" cy="730" r="16" fill="#ffd400"/><circle cx="184" cy="730" r="7.2" fill="#000" opacity="0.25"/></g><g filter="url(#sh)"><circle cx="171" cy="519" r="16" fill="#00c2ff"/><circle cx="171" cy="519" r="7.2" fill="#000" opacity="0.25"/></g><g filter="url(#sh)"><circle cx="150" cy="801" r="16" fill="#ff4d6d"/><circle cx="150" cy="801" r="7.2" fill="#000" opacity="0.25"/></g><g filter="url(#sh)"><circle cx="298" cy="516" r="16" fill="#7cff6b"/><circle cx="298" cy="516" r="7.2" fill="#000" opacity="0.25"/></g><g filter="url(#sh)"><circle cx="281" cy="615" r="16" fill="#111"/><circle cx="281" cy="615" r="7.2" fill="#000" opacity="0.25"/></g>
+<rect width="1080" height="1350" fill="url(#vig)"/>
+</svg>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/I18nProvider";
 import { CheckCircle2, Clock3, Loader2, XCircle } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { applyToLobby, cancelApplication } from "@/app/actions/lobby";
@@ -30,6 +31,7 @@ export function PlayerActions({
   full: boolean;
   application: { id: string; status: ApplicationStatus } | null;
 }) {
+  const t = useT();
   const now = useNow();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export function PlayerActions({
         {open &&
           (confirmLeave ? (
             <div className="animate-fade-up space-y-2 rounded-2xl border border-line p-4">
-              <p className="text-sm">Точно отказаться от игры? Ваше место освободится для других.</p>
+              <p className="text-sm">{t("Точно отказаться от игры? Ваше место освободится для других.")}</p>
               <div className="flex gap-2">
                 <button
                   className="btn flex-1 bg-danger text-white"
@@ -67,14 +69,14 @@ export function PlayerActions({
                   {pending && <Loader2 className="size-4 animate-spin" />} Отказаться
                 </button>
                 <button className="btn-secondary flex-1" onClick={() => setConfirmLeave(false)}>
-                  Остаюсь
+                  {t("Остаюсь")}
                 </button>
               </div>
             </div>
           ) : (
             <>
               <button className="btn-secondary w-full" disabled={!leaveAllowed} onClick={() => setConfirmLeave(true)}>
-                Отказаться от игры
+                {t("Отказаться от игры")}
               </button>
               {!leaveAllowed && (
                 <p className="text-center text-sm text-muted">
@@ -117,7 +119,7 @@ export function PlayerActions({
   }
 
   if (!open) return null;
-  if (full) return <div className="rounded-2xl bg-surface-2 p-4 text-center font-semibold text-muted">Все места заняты</div>;
+  if (full) return <div className="rounded-2xl bg-surface-2 p-4 text-center font-semibold text-muted">{t("Все места заняты")}</div>;
 
   return (
     <div className="space-y-3">
@@ -132,7 +134,7 @@ export function PlayerActions({
             maxLength={200}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Привет! Играю в нападении, могу прийти пораньше"
+            placeholder={t("Привет! Играю в нападении, могу прийти пораньше")}
             autoFocus
           />
           <div className="flex gap-2">
@@ -144,13 +146,13 @@ export function PlayerActions({
               {pending && <Loader2 className="size-4 animate-spin" />} Отправить заявку
             </button>
             <button className="btn-secondary" onClick={() => setComposing(false)}>
-              Отмена
+              {t("Отмена")}
             </button>
           </div>
         </div>
       ) : (
         <button className="btn-primary w-full text-lg" onClick={() => setComposing(true)}>
-          Хочу играть
+          {t("Хочу играть")}
         </button>
       )}
       {error && <p className="text-sm text-danger">{error}</p>}

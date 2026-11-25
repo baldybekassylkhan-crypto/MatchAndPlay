@@ -15,7 +15,7 @@ console.log = (...args) => {
 const db = new PGlite();
 
 const stubs = `
-create role anon; create role authenticated;
+create role anon; create role authenticated; create role service_role;
 create schema auth;
 create table auth.users(instance_id uuid, id uuid primary key, aud text, role text, email text, encrypted_password text,
   email_confirmed_at timestamptz, raw_app_meta_data jsonb, raw_user_meta_data jsonb, created_at timestamptz, updated_at timestamptz);
@@ -35,7 +35,7 @@ create function net.http_post(url text, body jsonb, headers jsonb, timeout_milli
 `;
 await db.exec(stubs);
 
-for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "migrations/0009_checkin_feed.sql", "migrations/0010_crews_messages.sql", "migrations/0011_tournaments.sql", "migrations/0012_private_block_check.sql", "seed.sql"]) {
+for (const f of ["migrations/0001_init.sql", "migrations/0002_cities.sql", "migrations/0003_lobbies.sql", "migrations/0004_swipes_saved.sql", "migrations/0005_ai_quota.sql", "migrations/0006_posts.sql", "migrations/0007_chat_notifications.sql", "migrations/0008_safety_and_flow.sql", "migrations/0009_checkin_feed.sql", "migrations/0010_crews_messages.sql", "migrations/0011_tournaments.sql", "migrations/0012_private_block_check.sql", "migrations/0013_weather_ranking_shake.sql", "migrations/0014_courts_women_rewards.sql", "seed.sql", "seed-pitch.sql"]) {
   let sql = readFileSync(path.join(dir, f), "utf8");
   sql = sql
     .replace(/create extension if not exists pg_cron[^;]*;/, "")
@@ -412,40 +412,61 @@ row = await lobbyRow(L26);
 check(row.accepted_count === 0 && row.status === "active" && (await appStatus(A26)) === "cancelled", "удаление аккаунта освобождает место в чужой игре", row);
 check((await lobbyRow(L27)).status === "cancelled", "удаление аккаунта отменяет свои будущие игры");
 
-// Этап 9: QR-отметка и лента
+// Этап 9/12: отметка встряхиванием по GPS и лента
 const THIRD = "33333333-3333-4333-8333-333333333333";
 await as(null);
 await db.exec(`insert into auth.users(id, email) values ('${THIRD}', 'third@x.kz')`);
 await as(THIRD);
 await db.exec(`insert into profiles(id, username, city_id, sports, level) values ('${THIRD}', 'third', 1, '{football}', 'amateur')`);
 const L30 = await newLobby(3, "20 minutes");
+await as(null);
+// Точка игры: 51.1000, 71.4000. 0.0001° широты ≈ 11 м
+await q(`update lobbies set lat = 51.1, lng = 71.4 where id = $1`, [L30]);
 await join(L30, ME);
 await join(L30, THIRD);
-await as(ME);
-await expectErr("игрок не может получить код", () => q(`select get_checkin_code($1)`, [L30]), "not_organizer");
-const checkIn = async (lobby, code) => (await q(`select check_in($1, $2) as r`, [lobby, code]))[0].r;
-check((await checkIn(L30, "000000")) === "bad_code", "до показа кода отметиться нельзя");
-await as(ORG);
-const codeInfo = (await q(`select get_checkin_code($1) as c`, [L30]))[0].c;
-check(/^\d{6}$/.test(codeInfo.code) && codeInfo.count === 1, "организатор получил код и отмечен автоматически", codeInfo.count);
+const shake = async (lobby, lat, lng, acc) => (await q(`select shake_check_in($1, $2, $3, $4) as r`, [lobby, lat, lng, acc]))[0].r;
 await as(OTHER);
-check((await checkIn(L30, codeInfo.code)) === "not_member", "посторонний не может отметиться даже с верным кодом");
+check((await shake(L30, 51.1, 71.4, 5)).status === "not_member", "посторонний не может отметиться даже на месте");
 await as(ME);
-check((await checkIn(L30, codeInfo.code)) === "ok", "принятый игрок отметился по коду");
-check((await checkIn(L30, codeInfo.code)) === "already", "повторная отметка не создаёт дубль");
+let sres = await shake(L30, 51.1003, 71.4, 5);
+check(sres.status === "too_far" && sres.distance > 30, "в 33 м от точки игры отметиться нельзя", sres);
+sres = await shake(L30, 51.1, 71.4, 120);
+check(sres.status === "weak_gps", "слабый GPS (±120 м) не принимается", sres);
+sres = await shake(L30, 51.0999, 71.4, 8);
+check(sres.status === "ok" && sres.method === "place", "в 11 м от точки игры — отметка", sres);
+check((await shake(L30, 51.0999, 71.4, 8)).status === "already", "повторная отметка не создаёт дубль");
+await as(ORG);
+sres = await shake(L30, 51.1, 71.4, 6);
+check(sres.status === "ok", "организатор отметился у своей точки", sres);
 check((await q(`select verified_games_count($1) as n`, [ME]))[0].n === 1, "игра с двумя отметками считается подтверждённой");
+// Рядом с организатором, хотя точка на карте далеко
+const L33 = await newLobby(3, "10 minutes");
+await as(null);
+await q(`update lobbies set lat = 51.2, lng = 71.5 where id = $1`, [L33]);
+await join(L33, ME);
+await join(L33, THIRD);
+await as(ORG);
+sres = await shake(L33, 51.15, 71.45, 10);
+check(sres.status === "too_far" && sres.host === true, "организатор далеко от точки: отметка ждёт игрока рядом", sres);
 await as(THIRD);
-const wrong = codeInfo.code === "000000" ? "000001" : "000000";
+sres = await shake(L33, 51.15005, 71.45, 10);
+check(sres.status === "ok" && sres.method === "organizer", "игрок в 6 м от организатора — отметка", sres);
+const hostRow = (await q(`select method from lobby_checkins where lobby_id = $1 and user_id = $2`, [L33, ORG]))[0];
+check(hostRow?.method === "host", "организатор отмечен, когда рядом отметился игрок", hostRow);
+await as(ME);
+sres = await shake(L33, 51.16, 71.45, 10);
+check(sres.status === "too_far", "в километре от организатора и точки — нельзя", sres);
 const tries = [];
-for (let i = 0; i < 6; i++) tries.push(await checkIn(L30, wrong));
-check(tries[4] === "bad_code" && tries[5] === "too_many", "после 5 неверных кодов за минуту попытки блокируются", tries.join(","));
-await expectErr("секрет недоступен обычному пользователю", async () => {
+for (let i = 0; i < 6; i++) tries.push((await shake(L33, 51.16, 71.45, 10)).status);
+check(tries.at(-1) === "too_many", "частые попытки блокируются", tries.join(","));
+await expectErr("точки организаторов недоступны обычному пользователю", async () => {
   await db.exec("set role authenticated");
-  try { await q(`select * from private.lobby_checkin_secrets`); } finally { await db.exec("reset role"); }
+  try { await q(`select * from private.organizer_positions`); } finally { await db.exec("reset role"); }
 }, "permission denied");
 const L31 = await newLobby(2, "3 hours");
 await as(ORG);
-await expectErr("код нельзя получить раньше чем за 30 минут", () => q(`select get_checkin_code($1)`, [L31]), "checkin_closed");
+check((await shake(L31, 51.1, 71.4, 5)).status === "closed", "отметка закрыта раньше чем за 30 минут");
+await expectErr("игрок не может обновлять точку организатора", async () => { await as(ME); await q(`select update_organizer_position($1, 51.1, 71.4, 5)`, [L30]); }, "not_organizer");
 
 // С кем играли: при отметках считаются только пришедшие
 await as(null);
@@ -746,6 +767,120 @@ const hiddenPosts = await rls(async () => (await q(`select count(*)::int n from 
 check(hiddenPosts === 0, "RLS по-прежнему скрывает посты при блокировке");
 await as(ME);
 await q(`delete from blocks where blocker_id = $1 and blocked_id = $2`, [ME, ORG]);
+
+// Этап 12: рейтинг команд города (данные из seed-pitch.sql)
+await as(ME);
+const ranking = await q(`select * from get_crew_ranking(2::smallint, 'football')`);
+check(ranking.length >= 3, "рейтинг футбольных команд Алматы за месяц не пуст", ranking.length);
+check(ranking.every((r, i) => i === 0 || ranking[i - 1].points >= r.points), "рейтинг отсортирован по очкам");
+check(ranking[0].rank === 1 && ranking[0].points >= 100, "у лидера есть очки за победу", ranking[0]);
+const prevMonth = (await q(`select to_char(kz_month_start(null, -1) + interval '5 hours', 'YYYY-MM-DD') as m`))[0].m;
+const rankingPrev = await q(`select * from get_crew_ranking(2::smallint, 'football', $1::date)`, [prevMonth]);
+check(rankingPrev.length >= 3 && ranking.some((r) => r.prev_rank != null), "есть итоги прошлого месяца и движение в рейтинге");
+check((await q(`select count(*)::int n from get_crew_ranking(2::smallint, 'volleyball')`))[0].n === 0, "рейтинг только для футбола и баскетбола");
+const champ = (await q(`select t.id, t.max_teams, tm.crew_id from tournaments t join tournament_teams tm on tm.id = t.winner_team_id
+  where t.status = 'finished' and t.max_teams = 8 and tm.crew_id is not null limit 1`))[0];
+if (champ) {
+  await as(null);
+  const pts = (await q(`select points, wins from crew_tournament_results('-infinity', 'infinity') where tournament_id = $1 and crew_id = $2`, [champ.id, champ.crew_id]))[0];
+  check(pts.points === 125 + 5 * pts.wins && pts.wins === 3, "победитель турнира на 8 команд: 100 × 1,25 + 5 за каждую победу", pts);
+}
+await as(ME);
+await expectErr("расчёт очков недоступен напрямую", () => rls(async () => q(`select * from crew_tournament_results(now() - interval '1 year', now())`)), "permission denied");
+check((await q(`select (kz_month_start('2026-03-15', -1) at time zone 'UTC')::text as t`))[0].t === "2026-01-31 19:00:00", "начало февраля по Казахстану считается верно");
+
+// Этап 12: предупреждение о погоде
+const LW = await newLobby(3, "3 hours");
+await join(LW, ME);
+await as(null);
+await q(`update lobbies set is_outdoor = true where id = $1`, [LW]);
+const forecast = { kind: "rain", reasons: ["rain"], precip_prob: 80, wind_ms: 5, temp_min: 7, temp_max: 9 };
+check((await q(`select send_weather_alert($1, $2::jsonb) as r`, [LW, JSON.stringify(forecast)]))[0].r === true, "предупреждение о погоде отправлено");
+const wn = await q(`select user_id from notifications where type = 'weather_alert' and payload->>'lobby_id' = $1`, [LW]);
+check(wn.length === 2 && wn.some((r) => r.user_id === ORG) && wn.some((r) => r.user_id === ME), "предупреждение получили организатор и игрок", wn.length);
+check((await q(`select send_weather_alert($1, $2::jsonb) as r`, [LW, JSON.stringify(forecast)]))[0].r === false, "второй раз о погоде не предупреждаем");
+const LW2 = await newLobby(3, "3 hours");
+check((await q(`select send_weather_alert($1, null) as r`, [LW2]))[0].r === false, "хорошая погода — без уведомления");
+check((await q(`select count(*)::int n from lobby_reminders where lobby_id = $1 and kind = 'weather'`, [LW2]))[0].n === 1, "игра помечена проверенной");
+await as(ME);
+await expectErr("пользователь не может сам разослать предупреждение", () => rls(async () => q(`select send_weather_alert($1, '{}'::jsonb)`, [LW2])), "permission denied");
+
+// Этап 13: обращения о площадках
+const ADM = "a5a5a5a5-5555-4555-8555-555555555555";
+await as(null);
+await db.exec(`insert into auth.users(id, email) values ('${ADM}', 'adm@x.kz')`);
+await as(ADM);
+await db.exec(`insert into profiles(id, username, city_id, sports, level) values ('${ADM}', 'admtest', 1, '{football}', 'amateur')`);
+await as(ME);
+const rep = (await q(`select report_court_issue('n123456', 1::smallint, 'Площадка у школы', 51.1, 71.4, 'hoop', 'Оторвано кольцо', null) as r`))[0].r;
+check(rep.existing === false, "обращение о сломанном кольце создано", rep);
+await as(ADM);
+const rep2 = (await q(`select report_court_issue('n123456', 1::smallint, 'Площадка у школы', 51.1, 71.4, 'hoop', null, null) as r`))[0].r;
+check(rep2.existing === true && rep2.id === rep.id, "повторное обращение стало голосом");
+check((await q(`select vote_court_report($1) as v`, [rep.id]))[0].v === 2, "повторный голос не считается дважды");
+await expectErr("чужое фото к обращению не прикрепить", () => q(`select report_court_issue('n123457', 1::smallint, 'Поле', 51.1, 71.4, 'goal', null, $1)`, [`${ME}/x.jpg`]), "bad_photo");
+await expectErr("статус меняет только модератор", () => q(`select set_court_report_status($1, 'fixed', null)`, [rep.id]), "not_admin");
+await as(null);
+await q(`insert into app_admins(user_id) values ($1) on conflict do nothing`, [ADM]);
+await as(ADM);
+await q(`select set_court_report_status($1, 'fixed', 'Кольцо заменили')`, [rep.id]);
+const fixedN = await q(`select user_id from notifications where type = 'court_report_fixed' and payload->>'report_id' = $1`, [rep.id]);
+check(fixedN.length === 2, "автор и поддержавшие узнали, что площадку исправили", fixedN.length);
+await as(ME);
+await expectErr("за закрытое обращение не проголосовать", () => q(`select vote_court_report($1)`, [rep.id]), "report_closed");
+await as(null);
+await q(`delete from app_admins where user_id = $1`, [ADM]);
+
+// Этап 13: игры только для девушек
+const GIRL = "a6a6a6a6-4444-4444-8444-444444444444";
+await db.exec(`insert into auth.users(id, email) values ('${GIRL}', 'girl@x.kz')`);
+await as(GIRL);
+await db.exec(`insert into profiles(id, username, city_id, sports, level, gender) values ('${GIRL}', 'girl', 1, '{volleyball}', 'amateur', 'female')`);
+await as(ME);
+await expectErr("мужчина не может создать игру для девушек", () => q(`insert into lobbies(organizer_id, sport, description, players_current, players_needed, start_time, city_id, location_name, women_only)
+  values ($1, 'volleyball', 'Волейбол', 2, 4, now() + interval '1 day', 1, 'Зал', true)`, [ME]), "women_only_organizer");
+await as(GIRL);
+const [{ id: LG }] = await q(`insert into lobbies(organizer_id, sport, description, players_current, players_needed, start_time, city_id, location_name, women_only)
+  values ($1, 'volleyball', 'Волейбол для девушек', 2, 4, now() + interval '1 day', 1, 'Зал', true) returning id`, [GIRL]);
+check(Boolean(LG), "девушка создала игру только для девушек");
+await as(ME);
+await expectErr("мужчина не может вступить в игру для девушек", () => q(`select apply_to_lobby($1, null)`, [LG]), "women_only");
+await as(null);
+const FEM2 = (await q(`select id from profiles where gender = 'female' and id::text like 'd0000000-0000-4000-8001-%' limit 1`))[0]?.id;
+check(Boolean(FEM2), "в демо-данных есть девушки с указанным полом");
+await as(FEM2);
+check(Boolean((await q(`select apply_to_lobby($1, null) as id`, [LG]))[0].id), "девушка подала заявку");
+
+// Этап 13: награды партнёров
+const RW = "a7a7a7a7-4444-4444-8444-444444444444";
+await as(null);
+await db.exec(`insert into auth.users(id, email) values ('${RW}', 'rw@x.kz')`);
+await as(RW);
+await db.exec(`insert into profiles(id, username, city_id, sports, level) values ('${RW}', 'rwtest', 1, '{football}', 'amateur')`);
+await as(null);
+const [{ id: SP }] = await q(`insert into sponsors(name, kind, color) values ('Тест-магазин', 'store', '#ff6b00') returning id`);
+const [{ id: OF }] = await q(`insert into reward_offers(sponsor_id, title, games_required) values ($1, 'Скидка 10%', 1) returning id`, [SP]);
+const [{ id: OF2 }] = await q(`insert into reward_offers(sponsor_id, title, games_required) values ($1, 'Кофе', 50) returning id`, [SP]);
+const LR = await newLobby(3, "10 minutes");
+await join(LR, RW);
+await as(null);
+await q(`insert into lobby_checkins(lobby_id, user_id, method) values ($1, $2, 'place'), ($1, $3, 'place')`, [LR, ORG, RW]);
+await as(RW);
+const myRewards = await q(`select * from get_my_rewards()`);
+const offer = myRewards.find((r) => r.offer_id === OF);
+check(offer && offer.progress >= 1, "прогресс награды считает подтверждённые игры месяца", offer?.progress);
+const code = (await q(`select claim_reward($1) as c`, [OF]))[0].c;
+check(/^MP-[0-9A-F]{4}-[0-9A-F]{4}$/.test(code), "получен код награды", code);
+check((await q(`select claim_reward($1) as c`, [OF]))[0].c === code, "повторно выдаётся тот же код");
+await expectErr("без нужного числа игр награду не получить", () => q(`select claim_reward($1)`, [OF2]), "not_enough_games");
+await expectErr("игрок не может сам погасить код", () => q(`select redeem_reward_code($1)`, [code]), "not_admin");
+await as(null);
+await q(`insert into app_admins(user_id) values ($1) on conflict do nothing`, [ADM]);
+await as(ADM);
+check((await q(`select redeem_reward_code($1) as r`, [code]))[0].r.status === "ok", "партнёр погасил код");
+check((await q(`select redeem_reward_code($1) as r`, [code]))[0].r.status === "used", "второй раз код не пройдёт");
+await as(null);
+await q(`delete from app_admins where user_id = $1`, [ADM]);
 
 realLog(failures ? `\n✗ Провалено проверок: ${failures}` : "\n✓ Все проверки базы данных прошли");
 process.exit(failures ? 1 : 0);
